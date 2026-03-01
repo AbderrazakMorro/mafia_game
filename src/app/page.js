@@ -223,6 +223,15 @@ export default function Home() {
                         )}
                     </AnimatePresence>
                 </div>
+
+                <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 0.5 }}
+                    transition={{ delay: 1.5 }}
+                    className="mt-8 text-white/30 text-xs tracking-widest uppercase font-medium hover:opacity-100 transition-opacity cursor-default"
+                >
+                    By abderrazak Morro
+                </motion.p>
             </motion.div>
         </main>
     )
