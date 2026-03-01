@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase'
 
 export default function Home() {
     const router = useRouter()
@@ -18,7 +18,7 @@ export default function Home() {
         // Génère un code court de 6 caractères
         const code = Math.random().toString(36).substring(2, 8).toUpperCase()
 
-        const { data, error } = await supabase.from('rooms').insert([{
+        const { data, error } = await getSupabase().from('rooms').insert([{
             code,
             status: 'lobby'
         }]).select().single()
@@ -36,7 +36,7 @@ export default function Home() {
         e.preventDefault()
         if (!joinCode.trim()) return
 
-        const { data, error } = await supabase
+        const { data, error } = await getSupabase()
             .from('rooms')
             .select('id')
             .eq('code', joinCode.toUpperCase())

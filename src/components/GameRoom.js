@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase'
 import { getMafiaCount } from '../utils/gameLogic'
 
 // ─────────────────────────────────────────────
@@ -640,13 +640,13 @@ const ChatBox = ({ roomId, players, currentPlayerId, phase }) => {
         }
         fetchMessages()
 
-        const channel = supabase.channel(`chat_${roomId}`)
+        const channel = getSupabase().channel(`chat_${roomId}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
                 setMessages(prev => [...prev, payload.new])
             })
             .subscribe()
 
-        return () => supabase.removeChannel(channel)
+        return () => getSupabase().removeChannel(channel)
     }, [roomId])
 
     const sendMessage = async (e) => {
@@ -654,7 +654,7 @@ const ChatBox = ({ roomId, players, currentPlayerId, phase }) => {
         if (!newMessage.trim() || !currentPlayerId) return
         const content = newMessage.trim()
         setNewMessage('')
-        await supabase.from('chat_messages').insert([{
+        await getSupabase().from('chat_messages').insert([{
             room_id: roomId,
             player_id: currentPlayerId,
             content
@@ -779,18 +779,18 @@ export default function GameRoom({ roomId }) {
         if (!roomId) return
 
         const fetchInitialData = async () => {
-            const { data: roomData } = await supabase.from('rooms').select('*').eq('id', roomId).single()
+            const { data: roomData } = await getSupabase().from('rooms').select('*').eq('id', roomId).single()
             if (roomData) { setRoom(roomData); setPhase(roomData.status) }
 
-            const { data: playersData } = await supabase.from('players').select('*').eq('room_id', roomId).order('created_at', { ascending: true })
+            const { data: playersData } = await getSupabase().from('players').select('*').eq('room_id', roomId).order('created_at', { ascending: true })
             if (playersData) setPlayers(playersData)
 
-            const { data: eventsData } = await supabase.from('game_events').select('*').eq('room_id', roomId).order('created_at', { ascending: true })
+            const { data: eventsData } = await getSupabase().from('game_events').select('*').eq('room_id', roomId).order('created_at', { ascending: true })
             if (eventsData) setEvents(eventsData)
         }
         fetchInitialData()
 
-        const channel = supabase.channel(`game_room_${roomId}`)
+        const channel = getSupabase().channel(`game_room_${roomId}`)
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
                 setRoom(payload.new)
                 setPhase(payload.new.status)
@@ -815,7 +815,7 @@ export default function GameRoom({ roomId }) {
             })
             .subscribe()
 
-        return () => supabase.removeChannel(channel)
+        return () => getSupabase().removeChannel(channel)
     }, [roomId])
 
     // ── Handlers ──
@@ -823,9 +823,9 @@ export default function GameRoom({ roomId }) {
         if (room && room.status !== 'lobby') return
         const mockUserId = 'user_' + Math.random().toString(36).substr(2, 9)
         if (players.length === 0 && room && !room.host_id) {
-            await supabase.from('rooms').update({ host_id: mockUserId }).eq('id', roomId)
+            await getSupabase().from('rooms').update({ host_id: mockUserId }).eq('id', roomId)
         }
-        const { data } = await supabase.from('players').insert([{
+        const { data } = await getSupabase().from('players').insert([{
             room_id: roomId, user_id: mockUserId, username,
             is_alive: true, is_protected: false, role: 'villager', is_ready: false,
         }]).select().single()
