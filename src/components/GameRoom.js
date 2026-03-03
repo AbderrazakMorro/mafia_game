@@ -855,6 +855,7 @@ export default function GameRoom({ roomId }) {
     const [detectiveOwnResult, setDetectiveOwnResult] = useState(null)
     const [voteCounts, setVoteCounts] = useState({})
     const [consentGranted, setConsentGranted] = useState(false)
+    const [isLeaving, setIsLeaving] = useState(false)
 
     // Keep me in sync with players list
     const meRef = useRef(null)
@@ -1001,6 +1002,26 @@ export default function GameRoom({ roomId }) {
         }
     }
 
+    const handleLeaveRoom = async () => {
+        if (!me) {
+            window.location.href = '/'
+            return
+        }
+
+        const confirmLeave = window.confirm("Êtes-vous sûr de vouloir quitter la salle ? Vous ne pourrez pas revenir.")
+        if (!confirmLeave) return
+
+        setIsLeaving(true)
+        try {
+            await api('/api/leave-room', { roomId, playerId: me.id })
+            window.location.href = '/'
+        } catch (err) {
+            console.error('Leave room error:', err.message)
+            alert('Erreur: Impossible de quitter la salle. ' + err.message)
+            setIsLeaving(false)
+        }
+    }
+
     // ── Computed values ──
     const isHost = room?.host_id === me?.user_id || (!room?.host_id && players[0]?.id === me?.id)
 
@@ -1096,6 +1117,17 @@ export default function GameRoom({ roomId }) {
 
     return (
         <>
+            {/* Top Bar Overlay */}
+            <div className="fixed top-4 left-4 z-50 pointer-events-auto">
+                <button
+                    onClick={handleLeaveRoom}
+                    disabled={isLeaving}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-950/50 hover:bg-red-600/80 border border-red-500/30 hover:border-red-500 rounded-full text-red-200 text-xs font-bold uppercase tracking-widest backdrop-blur-md transition-all shadow-[0_0_15px_rgba(220,38,38,0.2)] hover:shadow-[0_0_20px_rgba(220,38,38,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <span className="text-sm">🚪</span> {isLeaving ? 'Départ...' : 'Quitter la salle'}
+                </button>
+            </div>
+
             {renderPhase()}
             {me && phase !== 'roles' && <ChatBox roomId={roomId} players={players} currentPlayerId={me.id} phase={phase} />}
             <CookieConsentBanner onConsentChange={handleConsentChange} />
