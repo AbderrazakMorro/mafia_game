@@ -1,0 +1,205 @@
+'use client';
+
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    UserPlus, LogIn, Ghost, Fingerprint, Mail, Lock,
+    AtSign, Key, AlertCircle, Loader2, X
+} from 'lucide-react';
+
+export default function AuthModal({ onAuthSuccess, onClose }) {
+    const [activeTab, setActiveTab] = useState('sign_up');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const [signupData, setSignupData] = useState({ pseudo: '', email: '', password: '' });
+    const [loginData, setLoginData] = useState({ email: '', password: '' });
+    const [guestData, setGuestData] = useState({ pseudo_temp: '' });
+
+    const tabs = [
+        { id: 'sign_up', label: 'Inscription', icon: UserPlus },
+        { id: 'login', label: 'Connexion', icon: LogIn },
+        { id: 'guest', label: 'Invité', icon: Ghost },
+    ];
+
+    const handleSignup = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+        try {
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(signupData),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'inscription');
+            localStorage.setItem('mafia_user', JSON.stringify(data.user));
+            onAuthSuccess(data.user, `Bienvenue, ${data.user.pseudo} !`);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(loginData),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Identifiants invalides');
+            localStorage.setItem('mafia_user', JSON.stringify(data.user));
+            onAuthSuccess(data.user, `Bon retour ${data.user.pseudo}`);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleGuest = (e) => {
+        e.preventDefault();
+        if (!guestData.pseudo_temp.trim()) {
+            setError('Le pseudo est requis.');
+            return;
+        }
+        const guestUser = {
+            id: `guest_${Math.random().toString(36).substr(2, 9)}`,
+            pseudo: guestData.pseudo_temp,
+            is_guest: true,
+        };
+        localStorage.setItem('mafia_user', JSON.stringify(guestUser));
+        onAuthSuccess(guestUser, `Bienvenue, invité ${guestUser.pseudo}`);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden relative"
+            >
+                {/* Red accent */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 to-rose-900" />
+
+                {/* Close button */}
+                {onClose && (
+                    <button onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors z-10">
+                        <X className="w-5 h-5" />
+                    </button>
+                )}
+
+                <div className="p-6 pt-8">
+                    <div className="text-center mb-6">
+                        <h2 className="text-2xl font-black uppercase tracking-widest text-white mb-2">Entrez dans le cercle</h2>
+                        <p className="text-zinc-400 text-sm">Identifiez-vous pour la prochaine partie</p>
+                    </div>
+
+                    <AnimatePresence>
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="mb-6 bg-red-950/50 border border-red-900/50 rounded-xl p-3 flex items-start gap-3"
+                            >
+                                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                                <p className="text-red-200 text-sm">{error}</p>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Tabs */}
+                    <div className="flex bg-zinc-900 rounded-xl p-1 mb-8">
+                        {tabs.map((tab) => {
+                            const Icon = tab.icon;
+                            const isActive = activeTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => { setActiveTab(tab.id); setError(null); }}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg transition-all relative z-10 ${isActive ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                >
+                                    <Icon className="w-4 h-4" />
+                                    {tab.label}
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="activeTab"
+                                            className="absolute inset-0 bg-zinc-800 rounded-lg -z-10"
+                                            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                                        />
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Forms */}
+                    <div className="relative min-h-[220px]">
+                        <AnimatePresence mode="wait">
+                            {activeTab === 'sign_up' && (
+                                <motion.form key="signup" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }} onSubmit={handleSignup} className="space-y-4">
+                                    <InputField icon={Fingerprint} type="text" placeholder="Pseudo" value={signupData.pseudo} onChange={v => setSignupData({ ...signupData, pseudo: v })} />
+                                    <InputField icon={Mail} type="email" placeholder="Email" value={signupData.email} onChange={v => setSignupData({ ...signupData, email: v })} />
+                                    <InputField icon={Lock} type="password" placeholder="Mot de passe" value={signupData.password} onChange={v => setSignupData({ ...signupData, password: v })} />
+                                    <SubmitButton isLoading={isLoading} label="Créer le compte" icon={<UserPlus className="w-5 h-5" />} />
+                                </motion.form>
+                            )}
+                            {activeTab === 'login' && (
+                                <motion.form key="login" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }} onSubmit={handleLogin} className="space-y-4">
+                                    <InputField icon={AtSign} type="email" placeholder="Email" value={loginData.email} onChange={v => setLoginData({ ...loginData, email: v })} />
+                                    <InputField icon={Key} type="password" placeholder="Mot de passe" value={loginData.password} onChange={v => setLoginData({ ...loginData, password: v })} />
+                                    <SubmitButton isLoading={isLoading} label="Se connecter" icon={<LogIn className="w-5 h-5" />} />
+                                </motion.form>
+                            )}
+                            {activeTab === 'guest' && (
+                                <motion.form key="guest" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }} onSubmit={handleGuest} className="space-y-4">
+                                    <div className="text-zinc-400 text-sm mb-2 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50 flex items-start gap-3">
+                                        <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                                        <span>Session temporaire. Vos statistiques ne seront pas sauvegardées.</span>
+                                    </div>
+                                    <InputField icon={Ghost} type="text" placeholder="Pseudo temporaire" value={guestData.pseudo_temp} onChange={v => setGuestData({ ...guestData, pseudo_temp: v })} />
+                                    <SubmitButton isLoading={isLoading} label="Rejoindre en invité" icon={<Ghost className="w-5 h-5" />} />
+                                </motion.form>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
+function InputField({ icon: Icon, type, placeholder, value, onChange }) {
+    return (
+        <div className="relative group">
+            <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 group-focus-within:text-red-400 transition-colors" />
+            <input
+                type={type} required placeholder={placeholder} value={value}
+                onChange={e => onChange(e.target.value)}
+                className="w-full bg-zinc-900/50 border border-zinc-800 focus:border-red-500 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-red-500/50 transition-all"
+            />
+        </div>
+    );
+}
+
+function SubmitButton({ isLoading, label, icon }) {
+    return (
+        <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full mt-4 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-3 uppercase tracking-wider text-sm shadow-lg shadow-red-900/30"
+        >
+            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : icon}
+            <span>{isLoading ? 'Chargement...' : label}</span>
+        </button>
+    );
+}

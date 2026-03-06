@@ -1,9 +1,13 @@
 import './globals.css'
+import AuthProvider from '../components/AuthProvider'
 
-import './globals.css'
 
 export const viewport = {
-    themeColor: '#020617',
+    themeColor: '#1a1a1a',
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
 }
 
 export const metadata = {
@@ -29,8 +33,11 @@ export const metadata = {
     },
     appleWebApp: {
         capable: true,
-        statusBarStyle: 'default',
+        statusBarStyle: 'black-translucent',
         title: 'Mafia Culture',
+    },
+    other: {
+        'mobile-web-app-capable': 'yes',
     },
 }
 
@@ -48,8 +55,14 @@ export default function RootLayout({ children }) {
 
     return (
         <html lang="fr">
+            <head>
+                <link rel="apple-touch-icon" href="/icon-192x192.png" />
+                <link rel="apple-touch-icon" sizes="180x180" href="/icon-192x192.png" />
+            </head>
             <body>
-                {children}
+                <AuthProvider>
+                    {children}
+                </AuthProvider>
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

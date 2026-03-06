@@ -1,21 +1,29 @@
 {
-    "name": "Mafia Online",
+    "name": "Mafia Culture",
     "short_name": "Mafia",
-    "description": "Un jeu de déduction sociale multijoueur en temps réel propulsé par Next.js 14, Supabase et Framer Motion.",
+    "description": "Un jeu de déduction sociale multijoueur en temps réel. Jouez au Mafia en ligne avec chat vocal.",
     "start_url": "/",
+    "id": "/",
     "display": "standalone",
-    "background_color": "#020617",
-    "theme_color": "#020617",
+    "orientation": "portrait",
+    "background_color": "#000000",
+    "theme_color": "#1a1a1a",
+    "categories": [
+        "games",
+        "entertainment"
+    ],
     "icons": [
         {
             "src": "/icon-192x192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
         },
         {
             "src": "/icon-512x512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
         }
     ]
 }

@@ -1,10 +1,25 @@
 -- Schema Supabase Mafia Online (v2)
 
+-- 0. Table Users
+CREATE TABLE IF NOT EXISTS users (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  pseudo TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
+  password_hashed TEXT NOT NULL,
+  score INTEGER DEFAULT 0,
+  role_history JSONB DEFAULT '[]'::jsonb,
+  game_stats JSONB DEFAULT '{"games_played": 0, "games_won": 0}'::jsonb
+);
+
 -- 1. Table Rooms
 CREATE TABLE IF NOT EXISTS rooms (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   code TEXT NOT NULL UNIQUE,
+  name TEXT, -- custom game name
+  is_public BOOLEAN DEFAULT false, -- true for visible in lobby browser
+  max_players INTEGER DEFAULT 8,
   status TEXT NOT NULL DEFAULT 'lobby', -- lobby | roles | night_mafia | night_doctor | night_detective | day_discussion | day_vote | game_over
   host_id TEXT,
   phase_number INTEGER NOT NULL DEFAULT 0, -- increments each full night+day cycle
@@ -59,9 +74,22 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   is_mafia_chat BOOLEAN DEFAULT false
 );
 
+-- 6. Table Join Requests (for joining public/private games)
+CREATE TABLE IF NOT EXISTS join_requests (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL, -- The user.id or guest pseudo
+  username TEXT NOT NULL,
+  avatar_url TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' -- pending | accepted | rejected
+);
+
 -- Activation de Realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE rooms;
 ALTER PUBLICATION supabase_realtime ADD TABLE players;
 ALTER PUBLICATION supabase_realtime ADD TABLE actions;
 ALTER PUBLICATION supabase_realtime ADD TABLE game_events;
 ALTER PUBLICATION supabase_realtime ADD TABLE chat_messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE users;
+ALTER PUBLICATION supabase_realtime ADD TABLE join_requests;
