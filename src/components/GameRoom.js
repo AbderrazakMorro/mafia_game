@@ -6,10 +6,11 @@ import { getSupabase } from '../lib/supabase'
 import { getMafiaCount } from '../utils/gameLogic'
 import { getCookieConsent, getSessionCookie, setSessionCookie } from '../utils/cookieUtils'
 import CookieConsentBanner from './CookieConsentBanner'
+import useGameAudio from '../hooks/useGameAudio'
 import {
     Target, HeartPulse, Search, Users, ShieldAlert, BookOpen, Crown,
     Moon, Sun, Scale, Skull, Trophy, Home, MessageSquare, Mic, AlertCircle, X,
-    CheckCircle2, Clock, Check, XCircle
+    CheckCircle2, Clock, Check, XCircle, Volume2, VolumeX
 } from 'lucide-react'
 
 // ─────────────────────────────────────────────
@@ -41,7 +42,7 @@ const QRCode = ({ url }) => {
     return (
         <div className="flex flex-col items-center gap-2">
             <div className="p-2 bg-slate-900 rounded-xl border border-red-900/40 shadow-[0_0_20px_rgba(220,38,38,0.2)]">
-                <img src={src} alt="QR Code" width={180} height={180} className="rounded-lg block" />
+                <img src={src} alt="QR Code" width={180} height={180} className="rounded-lg block" loading="lazy" />
             </div>
             <p className="text-slate-500 text-xs italic">Scannez pour rejoindre</p>
         </div>
@@ -116,6 +117,7 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
     const [alreadyJoined, setAlreadyJoined] = useState(false)
     const [gameStarted, setGameStarted] = useState(false)
     const [autoJoinAttempted, setAutoJoinAttempted] = useState(false)
+    const [nicknameError, setNicknameError] = useState(null)
     const inviteUrl = typeof window !== 'undefined' ? `${window.location.origin}/room/${roomId}` : ''
 
     // Check if player has a session cookie or a pending request stored locally
@@ -131,6 +133,8 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                         if (stored) {
                             const parsed = JSON.parse(stored)
                             if (parsed?.pseudo) {
+                                // For private rooms, allow direct auto-join via invite link
+                                // For public rooms, only auto-join if the user is the host
                                 handleJoin(parsed.pseudo, parsed.id, parsed.avatar_url, true)
                             }
                         }
@@ -151,21 +155,39 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
         const nameToUse = autoPseudo || username
         if (!nameToUse.trim()) return
 
+        // Validate nickname length (3-20 chars)
+        if (nameToUse.trim().length < 3 || nameToUse.trim().length > 20) {
+            setNicknameError('Le pseudo doit contenir entre 3 et 20 caractères.')
+            return
+        }
+
         setJoining(true)
+        setNicknameError(null)
         const userId = autoUserId || `guest_${Math.random().toString(36).substr(2, 9)}`
 
         try {
-            const { data: roomData } = await getSupabase().from('rooms').select('is_public, host_id').eq('id', roomId).single()
+            const { data: roomData } = await getSupabase().from('rooms').select('is_public, host_id, max_players').eq('id', roomId).single()
             const isUserHost = roomData?.host_id === userId
+            const isPrivateRoom = !roomData?.is_public
 
-            if (!isAuto && !isUserHost) {
-                // Note: Regular players shouldn't reach here if they are not already joined
-                // They should be on the home page waiting for the host to accept them.
-                // If they manually navigate, they will be prompt "En attente" or "Non autorisé".
-                alert("Vous devez passer par l'accueil pour rejoindre cette partie.")
-                window.location.href = '/'
-            } else {
-                // Private game, or auto-join from having a session cookie, or host creating the room
+            // Check nickname uniqueness in the room
+            const nicknameTaken = players.some(p => p.username.toLowerCase() === nameToUse.trim().toLowerCase() && p.user_id !== userId)
+            if (nicknameTaken) {
+                setNicknameError('Ce pseudo est déjà utilisé dans cette salle. Choisissez-en un autre.')
+                setJoining(false)
+                return
+            }
+
+            // Check room capacity
+            if (players.length >= (roomData?.max_players || 8)) {
+                setNicknameError('La salle est pleine.')
+                setJoining(false)
+                return
+            }
+
+            // Private rooms: anyone with the link can join directly
+            // Public rooms: only host or auto-join (from session) can proceed; others go through the queue
+            if (isUserHost || isPrivateRoom || isAuto) {
                 await onJoin(nameToUse.trim(), userId, autoAvatarUrl)
                 setAlreadyJoined(true)
 
@@ -178,9 +200,14 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                         }))
                     } catch { }
                 }
+            } else {
+                // Public room, non-host, manual navigation → redirect to home for queue
+                alert("Vous devez passer par l'accueil pour rejoindre cette partie publique.")
+                window.location.href = '/'
             }
         } catch (err) {
             console.error("Error joining:", err)
+            setNicknameError('Une erreur est survenue. Veuillez réessayer.')
         }
         setJoining(false)
     }
@@ -222,10 +249,16 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                     <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-red-500 via-rose-400 to-orange-500 text-center uppercase tracking-tighter mb-1 drop-shadow-lg">Mafia</h1>
                     <p className="text-center text-purple-200/70 font-medium text-sm mb-8 tracking-[0.2em] uppercase">Entrez dans l&apos;ombre...</p>
                     <div className="space-y-4 relative z-10">
+                        {nicknameError && (
+                            <div className="bg-red-950/50 border border-red-900/50 rounded-xl p-3 flex items-start gap-3">
+                                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                                <p className="text-red-200 text-sm">{nicknameError}</p>
+                            </div>
+                        )}
                         <input
-                            type="text" value={username} onChange={e => setUsername(e.target.value)}
+                            type="text" value={username} onChange={e => { setUsername(e.target.value); setNicknameError(null) }}
                             onKeyDown={e => e.key === 'Enter' && handleJoin()}
-                            maxLength={15} placeholder="Votre alias..."
+                            maxLength={20} placeholder="Votre alias (3-20 caractères)..."
                             className="w-full bg-black/40 border border-white/10 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 rounded-2xl px-6 py-4 text-white text-center text-lg font-bold placeholder:text-white/30 placeholder:font-normal outline-none transition-all backdrop-blur-md"
                         />
                         <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
@@ -300,7 +333,7 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                                     >
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-black shadow-inner overflow-hidden shrink-0 ${p.user_id === currentUserId ? 'bg-gradient-to-br from-purple-500 to-red-500 text-white' : 'bg-gradient-to-br from-slate-700 to-slate-900 text-slate-400'}`}>
                                             {p.avatar_url ? (
-                                                <img src={p.avatar_url} alt={p.username} className="w-full h-full object-cover" />
+                                                <img src={p.avatar_url} alt={p.username} className="w-full h-full object-cover" loading="lazy" />
                                             ) : (
                                                 p.username[0].toUpperCase()
                                             )}
@@ -372,7 +405,7 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                                             <div className="flex items-center gap-4 truncate">
                                                 <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-black shadow-inner overflow-hidden shrink-0 bg-gradient-to-br from-slate-700 to-slate-900 text-slate-400 border border-white/10">
                                                     {req.avatar_url ? (
-                                                        <img src={req.avatar_url} alt={req.username} className="w-full h-full object-cover" />
+                                                        <img src={req.avatar_url} alt={req.username} className="w-full h-full object-cover" loading="lazy" />
                                                     ) : (
                                                         req.username[0].toUpperCase()
                                                     )}
@@ -1061,6 +1094,9 @@ export default function GameRoom({ roomId }) {
     const [isLeaving, setIsLeaving] = useState(false)
     const [pendingRequests, setPendingRequests] = useState([]) // [NEW] Keep track of join requests
 
+    // 🎵 Phase-based background audio
+    const { isMuted, toggleMute } = useGameAudio(phase)
+
     // Keep me in sync with players list
     const meRef = useRef(null)
     meRef.current = me
@@ -1472,13 +1508,20 @@ export default function GameRoom({ roomId }) {
     return (
         <>
             {/* Top Bar Overlay */}
-            <div className="fixed top-4 left-4 z-50 pointer-events-auto">
+            <div className="fixed top-4 left-4 z-50 pointer-events-auto flex items-center gap-2">
                 <button
                     onClick={handleLeaveRoom}
                     disabled={isLeaving}
                     className="flex items-center gap-2 px-4 py-2 bg-red-950/50 hover:bg-red-600/80 border border-red-500/30 hover:border-red-500 rounded-full text-red-200 text-xs font-bold uppercase tracking-widest backdrop-blur-md transition-all shadow-[0_0_15px_rgba(220,38,38,0.2)] hover:shadow-[0_0_20px_rgba(220,38,38,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <span className="text-sm">🚪</span> {isLeaving ? 'Départ...' : 'Quitter la salle'}
+                </button>
+                <button
+                    onClick={toggleMute}
+                    className="flex items-center justify-center w-9 h-9 bg-black/40 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-full text-white/60 hover:text-white backdrop-blur-md transition-all"
+                    title={isMuted ? 'Activer le son' : 'Couper le son'}
+                >
+                    {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                 </button>
             </div>
 

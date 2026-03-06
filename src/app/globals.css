@@ -6,6 +6,41 @@
   --foreground-rgb: 255, 255, 255;
   --background-start-rgb: 0, 0, 0;
   --background-end-rgb: 0, 0, 0;
+  --font-scale: 0.85;
+  --layout-padding: 8px;
+  --layout-margin: 8px;
+  --layout-columns: 1;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --font-scale: 0.95;
+    --layout-padding: 12px;
+    --layout-margin: 12px;
+    --layout-columns: 2;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --font-scale: 1.0;
+    --layout-padding: 16px;
+    --layout-margin: 16px;
+    --layout-columns: 3;
+  }
+}
+
+@media (min-width: 1440px) {
+  :root {
+    --font-scale: 1.1;
+    --layout-padding: 24px;
+    --layout-margin: 24px;
+    --layout-columns: 4;
+  }
+}
+
+html {
+  font-size: calc(16px * var(--font-scale));
 }
 
 body {
@@ -15,6 +50,16 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+}
+
+/* Disable transitions natively on low performance/battery settings */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Custom Scrollbar for Lobby */

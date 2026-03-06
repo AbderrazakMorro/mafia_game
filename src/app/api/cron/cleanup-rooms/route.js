@@ -5,15 +5,15 @@ export async function POST(req) {
     try {
         const supabase = createServerClient();
 
-        // Calculate exactly 5 minutes ago in ISO format string
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        // Calculate exactly 30 minutes ago in ISO format string
+        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
 
-        // Fetch rooms that are in 'waiting' state and older than 5 minutes
+        // Fetch rooms that are still in 'lobby' state and older than 30 minutes
         const { data: roomsToDelete, error: fetchError } = await supabase
             .from('rooms')
             .select('id')
-            .eq('status', 'waiting')
-            .lte('created_at', fiveMinutesAgo);
+            .eq('status', 'lobby')
+            .lte('created_at', thirtyMinutesAgo);
 
         if (fetchError) {
             console.error("Error fetching old rooms:", fetchError);

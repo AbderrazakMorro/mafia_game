@@ -1,6 +1,6 @@
 import './globals.css'
 import AuthProvider from '../components/AuthProvider'
-
+import GlobalAudioProvider from '../components/GlobalAudioProvider'
 
 export const viewport = {
     themeColor: '#1a1a1a',
@@ -60,9 +60,11 @@ export default function RootLayout({ children }) {
                 <link rel="apple-touch-icon" sizes="180x180" href="/icon-192x192.png" />
             </head>
             <body>
-                <AuthProvider>
-                    {children}
-                </AuthProvider>
+                <GlobalAudioProvider>
+                    <AuthProvider>
+                        {children}
+                    </AuthProvider>
+                </GlobalAudioProvider>
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

@@ -7,14 +7,17 @@ import AvatarPicker from './AvatarPicker';
 import {
     X, Mail, BarChart3, Gamepad2, Trophy, Save,
     Settings, Shield, LogOut, Fingerprint, Percent, Image as ImageIcon,
-    BookOpen
+    BookOpen, Trash2, AlertTriangle, Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ProfileModal({ onClose }) {
-    const { user, updateUser, logout } = useAuth();
+    const { user, updateUser, logout, deleteAccount } = useAuth();
     const [activeSection, setActiveSection] = useState('identity');
     const [isEditing, setIsEditing] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState(null);
     const [editData, setEditData] = useState({
         pseudo: user?.pseudo || '',
     });
@@ -38,6 +41,18 @@ export default function ProfileModal({ onClose }) {
     const handleLogout = () => {
         logout();
         onClose();
+    };
+
+    const handleDeleteAccount = async () => {
+        setIsDeleting(true);
+        setDeleteError(null);
+        const result = await deleteAccount();
+        if (result?.success) {
+            onClose();
+        } else {
+            setDeleteError(result?.error || 'Erreur inconnue.');
+            setIsDeleting(false);
+        }
     };
 
     const sections = [
@@ -77,6 +92,7 @@ export default function ProfileModal({ onClose }) {
                                 src={pendingAvatar || user.avatar_url}
                                 alt={user.pseudo}
                                 className="w-full h-full object-cover"
+                                loading="lazy"
                             />
                         ) : (
                             <div className="w-full h-full bg-gradient-to-br from-red-600 to-rose-800 flex items-center justify-center">
@@ -194,14 +210,53 @@ export default function ProfileModal({ onClose }) {
                     </AnimatePresence>
                 </div>
 
-                {/* Footer - Logout */}
-                <div className="px-6 pb-6 shrink-0">
+                {/* Footer - Logout + Delete */}
+                <div className="px-6 pb-6 shrink-0 space-y-2">
                     <button
                         onClick={handleLogout}
                         className="w-full bg-red-950/50 hover:bg-red-900/50 border border-red-900/30 text-red-300 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 uppercase tracking-wider text-sm"
                     >
                         <LogOut className="w-4 h-4" /> Déconnexion
                     </button>
+
+                    {!isGuest && (
+                        <>
+                            {showDeleteConfirm ? (
+                                <div className="bg-red-950/80 border border-red-800 rounded-xl p-4 space-y-3">
+                                    <div className="flex items-center gap-2 text-red-400">
+                                        <AlertTriangle className="w-5 h-5 shrink-0" />
+                                        <p className="text-sm font-bold">Supprimer votre compte définitivement ?</p>
+                                    </div>
+                                    <p className="text-red-300/70 text-xs">Cette action est irréversible. Toutes vos données seront supprimées.</p>
+                                    {deleteError && <p className="text-red-400 text-xs">{deleteError}</p>}
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleDeleteAccount}
+                                            disabled={isDeleting}
+                                            className="flex-1 bg-red-700 hover:bg-red-600 text-white font-bold py-2 rounded-lg text-xs uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                        >
+                                            {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                                            {isDeleting ? 'Suppression...' : 'Confirmer'}
+                                        </button>
+                                        <button
+                                            onClick={() => { setShowDeleteConfirm(false); setDeleteError(null); }}
+                                            disabled={isDeleting}
+                                            className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-2 rounded-lg text-xs uppercase tracking-wider transition-all disabled:opacity-50"
+                                        >
+                                            Annuler
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="w-full bg-zinc-900/50 hover:bg-red-950/50 border border-zinc-800 hover:border-red-900/50 text-zinc-500 hover:text-red-400 font-medium py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" /> Supprimer mon compte
+                                </button>
+                            )}
+                        </>
+                    )}
                 </div>
             </motion.div>
         </div>

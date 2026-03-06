@@ -8,12 +8,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { getSupabase } from '../lib/supabase'
 import { useAuth } from '../components/AuthProvider'
 import ProfileModal from '../components/ProfileModal'
+import { useGlobalAudio } from '../components/GlobalAudioProvider'
 import Link from 'next/link'
 import {
     Sword, LogIn, UserPlus, UserCircle, LogOut,
     Play, Loader2, Smartphone, DoorOpen, Hash,
     Globe, Lock, Settings, Users, Sparkles, AlertCircle, Crown, Clock,
-    BookOpen, Shield
+    BookOpen, Shield, Trash2, Volume2, VolumeX
 } from 'lucide-react'
 
 export default function Home() {
@@ -31,6 +32,7 @@ export default function Home() {
     const [isFetchingMyRooms, setIsFetchingMyRooms] = useState(true)
     const [myPendingRequests, setMyPendingRequests] = useState([])
     const [joinLoadingId, setJoinLoadingId] = useState(null)
+    const { isMuted: globalMuted, toggleMute: toggleGlobalMute } = useGlobalAudio()
     const [createSettings, setCreateSettings] = useState({
         name: '',
         isPublic: true,
@@ -217,6 +219,22 @@ export default function Home() {
         }
     }
 
+    const deleteRoom = async (roomId) => {
+        if (!window.confirm('Supprimer ce salon définitivement ?')) return
+        try {
+            const res = await fetch('/api/game/delete-room', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId, hostId: user.id })
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error)
+            setMyRooms(prev => prev.filter(r => r.id !== roomId))
+        } catch (err) {
+            alert('Erreur: ' + err.message)
+        }
+    }
+
     const joinRoom = async (e) => {
         e.preventDefault()
         if (!joinCode.trim()) return
@@ -309,7 +327,7 @@ export default function Home() {
                                             className="flex items-center gap-2 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 px-3 py-1.5 rounded-xl text-sm text-white font-medium transition-all"
                                         >
                                             {user.avatar_url ? (
-                                                <img src={user.avatar_url} alt={user.pseudo} className="w-7 h-7 rounded-full border border-red-600/50" />
+                                                <img src={user.avatar_url} alt={user.pseudo} className="w-7 h-7 rounded-full border border-red-600/50" loading="lazy" />
                                             ) : (
                                                 <UserCircle className="w-5 h-5 text-red-400" />
                                             )}
@@ -493,12 +511,23 @@ export default function Home() {
                                                                 </span>
                                                             </div>
                                                         </div>
-                                                        <button
-                                                            onClick={() => router.push(`/room/${room.id}`)}
-                                                            className="w-full sm:w-auto bg-yellow-600/80 hover:bg-yellow-500 border border-yellow-500 text-white font-bold py-2 px-6 rounded-xl transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-widest shrink-0 shadow-lg"
-                                                        >
-                                                            Gérer / Rejoindre
-                                                        </button>
+                                                        <div className="flex gap-2 w-full sm:w-auto">
+                                                            <button
+                                                                onClick={() => router.push(`/room/${room.id}`)}
+                                                                className="flex-1 sm:flex-initial bg-yellow-600/80 hover:bg-yellow-500 border border-yellow-500 text-white font-bold py-2 px-6 rounded-xl transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-widest shrink-0 shadow-lg"
+                                                            >
+                                                                Gérer / Rejoindre
+                                                            </button>
+                                                            {room.status === 'lobby' && (
+                                                                <button
+                                                                    onClick={() => deleteRoom(room.id)}
+                                                                    className="bg-red-950/60 hover:bg-red-600 border border-red-900/50 hover:border-red-500 text-red-400 hover:text-white py-2 px-3 rounded-xl transition-all flex items-center justify-center shrink-0"
+                                                                    title="Supprimer le salon"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </motion.div>
                                                 )
                                             })}
