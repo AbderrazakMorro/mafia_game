@@ -9,7 +9,9 @@ CREATE TABLE IF NOT EXISTS users (
   password_hashed TEXT NOT NULL,
   score INTEGER DEFAULT 0,
   role_history JSONB DEFAULT '[]'::jsonb,
-  game_stats JSONB DEFAULT '{"games_played": 0, "games_won": 0}'::jsonb
+  game_stats JSONB DEFAULT '{"games_played": 0, "games_won": 0}'::jsonb,
+  reset_password_token TEXT,
+  reset_password_expires TIMESTAMP WITH TIME ZONE
 );
 
 -- 1. Table Rooms

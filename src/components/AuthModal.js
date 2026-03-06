@@ -156,7 +156,12 @@ export default function AuthModal({ onAuthSuccess, onClose }) {
                             {activeTab === 'login' && (
                                 <motion.form key="login" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }} onSubmit={handleLogin} className="space-y-4">
                                     <InputField icon={AtSign} type="email" placeholder="Email" value={loginData.email} onChange={v => setLoginData({ ...loginData, email: v })} />
-                                    <InputField icon={Key} type="password" placeholder="Mot de passe" value={loginData.password} onChange={v => setLoginData({ ...loginData, password: v })} />
+                                    <div className="space-y-1">
+                                        <InputField icon={Key} type="password" placeholder="Mot de passe" value={loginData.password} onChange={v => setLoginData({ ...loginData, password: v })} />
+                                        <div className="text-right mt-1">
+                                            <a href="/forgot-password" onClick={onClose} className="text-xs text-zinc-500 hover:text-white transition-colors pr-1">Mot de passe oublié ?</a>
+                                        </div>
+                                    </div>
                                     <SubmitButton isLoading={isLoading} label="Se connecter" icon={<LogIn className="w-5 h-5" />} />
                                 </motion.form>
                             )}
