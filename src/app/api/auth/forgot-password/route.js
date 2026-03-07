@@ -5,70 +5,70 @@ import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 
 const forgotPasswordSchema = z.object({
-    email: z.string().email('Format email invalide'),
+  email: z.string().email('Format email invalide'),
 });
 
 export async function POST(req) {
-    try {
-        const body = await req.json();
-        const { email } = forgotPasswordSchema.parse(body);
+  try {
+    const body = await req.json();
+    const { email } = forgotPasswordSchema.parse(body);
 
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        // Require service role key to bypass RLS for user lookup and update
-        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    // Require service role key to bypass RLS for user lookup and update
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // 1. Check if user exists in custom users table
-        const { data: user, error: userError } = await supabase
-            .from('users')
-            .select('id, email')
-            .eq('email', email)
-            .single();
+    // 1. Check if user exists in custom users table
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('email', email)
+      .single();
 
-        if (userError || !user) {
-            // User not found. We still return success to prevent email enumeration.
-            console.log(`Password reset requested for non-existent email: ${email}`);
-            return NextResponse.json({
-                message: 'Si cette adresse email existe, un lien de réinitialisation a été envoyé.'
-            }, { status: 200 });
-        }
+    if (userError || !user) {
+      // User not found. We still return success to prevent email enumeration.
+      console.log(`Password reset requested for non-existent email: ${email}`);
+      return NextResponse.json({
+        message: 'Si cette adresse email existe, un lien de réinitialisation a été envoyé.'
+      }, { status: 200 });
+    }
 
-        // 2. Generate token and expiration
-        const token = crypto.randomBytes(32).toString('hex');
-        const expiresAt = new Date();
-        expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour token validity
+    // 2. Generate token and expiration
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour token validity
 
-        // 3. Save token to users table
-        const { error: updateError } = await supabase
-            .from('users')
-            .update({
-                reset_password_token: token,
-                reset_password_expires: expiresAt.toISOString()
-            })
-            .eq('id', user.id);
+    // 3. Save token to users table
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        reset_password_token: token,
+        reset_password_expires: expiresAt.toISOString()
+      })
+      .eq('id', user.id);
 
-        if (updateError) {
-            console.error('Error saving reset token to DB:', updateError);
-            throw new Error('Database error');
-        }
+    if (updateError) {
+      console.error('Error saving reset token to DB:', updateError);
+      throw new Error('Database error');
+    }
 
-        // 4. Send email using Nodemailer
-        const transporter = nodemailer.createTransport({
-            service: 'Gmail',
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
+    // 4. Send email using Nodemailer
+    const transporter = nodemailer.createTransport({
+      service: 'Gmail',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
 
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-        const resetLink = `${baseUrl}/update-password?token=${token}`;
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mafiaculture.vercel.app/';
+    const resetLink = `${baseUrl}/update-password?token=${token}`;
 
-        const mailOptions = {
-            from: `"Mafia Culture" <${process.env.SMTP_USER}>`,
-            to: email,
-            subject: 'Réinitialisation de votre mot de passe - Mafia Culture',
-            html: `
+    const mailOptions = {
+      from: `"Mafia Culture" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: 'Réinitialisation de votre mot de passe - Mafia Culture',
+      html: `
             <div style="background-color: #0a0a0a; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px 20px; text-align: center; border-radius: 8px;">
               <div style="margin-bottom: 30px;">
                 <h1 style="color: #e63946; font-size: 28px; letter-spacing: 2px; text-transform: uppercase; margin: 0;">
@@ -99,19 +99,19 @@ export async function POST(req) {
               </div>
             </div>
             `,
-        };
+    };
 
-        await transporter.sendMail(mailOptions);
+    await transporter.sendMail(mailOptions);
 
-        return NextResponse.json({
-            message: 'Si cette adresse email existe, un lien de réinitialisation a été envoyé.'
-        }, { status: 200 });
+    return NextResponse.json({
+      message: 'Si cette adresse email existe, un lien de réinitialisation a été envoyé.'
+    }, { status: 200 });
 
-    } catch (error) {
-        if (error instanceof z.ZodError) {
-            return NextResponse.json({ error: error.errors[0].message }, { status: 400 });
-        }
-        console.error('Forgot Password Error:', error);
-        return NextResponse.json({ error: 'Une erreur interne est survenue.' }, { status: 500 });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.errors[0].message }, { status: 400 });
     }
+    console.error('Forgot Password Error:', error);
+    return NextResponse.json({ error: 'Une erreur interne est survenue.' }, { status: 500 });
+  }
 }
