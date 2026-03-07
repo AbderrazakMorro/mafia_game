@@ -1,29 +1,59 @@
 {
-    "name": "Mafia Culture",
-    "short_name": "Mafia",
-    "description": "Un jeu de déduction sociale multijoueur en temps réel. Jouez au Mafia en ligne avec chat vocal.",
+    "id": "mafia-culture-v1",
+    "name": "Mafia Culture: Multiplayer Social Deduction",
+    "short_name": "Mafia Culture",
+    "description": "Join the city in this real-time strategy game. Will you find the Mafia or become their next victim?",
     "start_url": "/",
-    "id": "/",
     "display": "standalone",
+    "display_override": [
+        "window-controls-overlay",
+        "minimal-ui"
+    ],
     "orientation": "portrait",
-    "background_color": "#000000",
-    "theme_color": "#1a1a1a",
+    "background_color": "#0a0a0a",
+    "theme_color": "#0a0a0a",
     "categories": [
         "games",
-        "entertainment"
+        "social"
     ],
     "icons": [
         {
-            "src": "/icon-192x192.png",
+            "src": "/icons/icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
-            "src": "/icon-512x512.png",
+            "src": "/icons/icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/screenshots/mobile-view.png",
+            "sizes": "1080x1920",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "Join the Mafia Lobby"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Join Lobby",
+            "url": "/lobby",
+            "icons": [
+                {
+                    "src": "/icons/lobby.png",
+                    "sizes": "96x96"
+                }
+            ]
         }
     ]
 }
