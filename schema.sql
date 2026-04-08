@@ -95,3 +95,87 @@ ALTER PUBLICATION supabase_realtime ADD TABLE game_events;
 ALTER PUBLICATION supabase_realtime ADD TABLE chat_messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE users;
 ALTER PUBLICATION supabase_realtime ADD TABLE join_requests;
+
+-- ==========================================
+-- FEATURE: REPLAY & ANTI-CHEAT (RLS)
+-- ==========================================
+
+-- 1. Add replay column (run this safely if table exists)
+ALTER TABLE players ADD COLUMN IF NOT EXISTS ready_for_replay BOOLEAN DEFAULT false;
+
+-- 2. Anti-Cheat: Enable RLS on players table
+ALTER TABLE players ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Players can read ALL columns of THEIR OWN row
+CREATE POLICY "Players can view their own row" ON players
+  FOR SELECT USING (user_id = auth.uid()::text);
+
+-- Policy: Allow service role / secure backend full access (default if no policy restricts it, 
+-- but explicitly allowing authenticated inserts for now if backend uses auth token, 
+-- though Edge Functions usually use Service Role which bypasses RLS)
+
+-- 3. Sanitized View for Public Player Data (No Roles)
+CREATE OR REPLACE VIEW public_players AS
+  SELECT id, created_at, room_id, user_id, username, avatar_url, is_alive, is_protected, is_ready, ready_for_replay
+  FROM players;
+
+GRANT SELECT ON public_players TO authenticated, anon;
+-- Also add the view to realtime publication if clients need to subscribe to it directly
+-- Note: Supabase Realtime doesn't support views automatically, so usually backend will push events
+-- or we use a workaround wrapper.
+
+-- 4. RPC for triggering a replays
+CREATE OR REPLACE FUNCTION reset_game_if_ready(p_room_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_total_players INT;
+  v_ready_players INT;
+BEGIN
+  -- Count active players in room
+  SELECT COUNT(*) INTO v_total_players FROM players WHERE room_id = p_room_id;
+  
+  -- Count ready players
+  SELECT COUNT(*) INTO v_ready_players FROM players WHERE room_id = p_room_id AND ready_for_replay = true;
+
+  -- If everyone is ready, reset game
+  IF v_total_players > 0 AND v_total_players = v_ready_players THEN
+    -- Reset room
+    UPDATE rooms SET status = 'lobby', phase_number = 0, winner = NULL, revote_round = 0, revote_candidates = NULL WHERE id = p_room_id;
+    -- Reset players
+    UPDATE players SET role = NULL, is_alive = true, is_protected = false, is_ready = false, ready_for_replay = false WHERE room_id = p_room_id;
+    -- Clear actions
+    DELETE FROM actions WHERE room_id = p_room_id;
+    -- Clear events
+    DELETE FROM game_events WHERE room_id = p_room_id;
+    
+    RETURN TRUE;
+  END IF;
+
+  RETURN FALSE;
+END;
+$$;
+
+-- 5. RPC to get public players
+CREATE OR REPLACE FUNCTION get_public_players(p_room_id UUID)
+RETURNS TABLE (
+  id UUID,
+  created_at TIMESTAMP WITH TIME ZONE,
+  room_id UUID,
+  user_id TEXT,
+  username TEXT,
+  avatar_url TEXT,
+  is_alive BOOLEAN,
+  is_protected BOOLEAN,
+  is_ready BOOLEAN,
+  ready_for_replay BOOLEAN
+)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT id, created_at, room_id, user_id, username, avatar_url, is_alive, is_protected, is_ready, ready_for_replay
+  FROM players
+  WHERE room_id = p_room_id;
+$$;

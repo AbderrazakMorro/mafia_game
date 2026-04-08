@@ -783,8 +783,13 @@ const DayPhase = ({ players, currentUserId, onVote, phase, events, playerRole, d
 // ─────────────────────────────────────────────
 // WIN SCREEN
 // ─────────────────────────────────────────────
-const WinScreen = ({ winner, players }) => {
+const WinScreen = ({ winner, players, currentUserId, onReplay }) => {
     const isMafia = winner === 'mafia'
+    const mePlayer = players.find(p => p.user_id === currentUserId)
+    const isReady = mePlayer?.ready_for_replay
+
+    const readyCount = players.filter(p => p.ready_for_replay).length
+
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-4 relative overflow-hidden font-sans">
             <div className="absolute inset-0 z-0 pointer-events-none">
@@ -830,9 +835,21 @@ const WinScreen = ({ winner, players }) => {
                     </div>
                 </motion.div>
 
-                <motion.a whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} href="/" className="mt-12 px-12 py-5 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-xl rounded-full text-white font-bold uppercase tracking-[0.2em] text-sm shadow-[0_0_30px_rgba(255,255,255,0.1)] transition-all z-10">
-                    Jouer une nouvelle partie
-                </motion.a>
+                <div className="mt-12 flex flex-col sm:flex-row items-center gap-4 z-10">
+                    {isReady ? (
+                        <div className="px-8 py-4 bg-white/5 border border-white/10 rounded-full flex flex-col items-center gap-1 backdrop-blur-xl">
+                            <p className="text-white/80 font-bold text-sm">En attente des autres...</p>
+                            <p className="text-white/40 text-xs">{readyCount} / {players.length} prêts</p>
+                        </div>
+                    ) : (
+                        <motion.button onClick={onReplay} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className={`px-10 py-4 ${isMafia ? 'bg-red-600 hover:bg-red-500 shadow-[0_0_20px_rgba(220,38,38,0.4)]' : 'bg-emerald-600 hover:bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]'} rounded-full text-white font-black uppercase tracking-widest text-sm transition-all`}>
+                            Rejouer dans ce salon
+                        </motion.button>
+                    )}
+                    <a href="/" className="px-8 py-4 bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-xl rounded-full text-white/80 hover:text-white font-bold uppercase tracking-[0.1em] text-sm transition-all">
+                        Quitter
+                    </a>
+                </div>
             </motion.div>
         </div>
     )
@@ -1164,15 +1181,17 @@ export default function GameRoom({ roomId }) {
                     setConsentGranted(true)
                     const cookie = getSessionCookie()
                     if (cookie && cookie.roomId === roomId) {
-                        const { data: md } = await getSupabase()
-                            .from('players')
-                            .select('*')
-                            .eq('room_id', roomId)
-                            .eq('user_id', cookie.userId)
-                            .single()
-                        if (md) {
-                            fetchedMeData = md
-                            setMe(md)
+                        try {
+                            const res = await fetch(`/api/game/my-role?roomId=${roomId}`, {
+                                headers: { 'x-user-id': cookie.userId }
+                            })
+                            const data = await res.json()
+                            if (data.player) {
+                                fetchedMeData = data.player
+                                setMe(data.player)
+                            }
+                        } catch (err) {
+                            console.error('Initial fetch me error:', err)
                         }
                     }
                 }
@@ -1181,7 +1200,7 @@ export default function GameRoom({ roomId }) {
             const { data: roomData } = await getSupabase().from('rooms').select('*').eq('id', roomId).single()
             if (roomData) { setRoom(roomData); setPhase(roomData.status) }
 
-            const { data: playersData } = await getSupabase().from('players').select('*').eq('room_id', roomId).order('created_at', { ascending: true })
+            const { data: playersData } = await getSupabase().from('public_players').select('*').eq('room_id', roomId).order('created_at', { ascending: true })
             if (playersData) setPlayers(playersData)
 
             const { data: eventsData } = await getSupabase().from('game_events').select('*').eq('room_id', roomId).order('created_at', { ascending: true })
@@ -1212,23 +1231,56 @@ export default function GameRoom({ roomId }) {
                     setPhase(payload.new.status)
                 }
             })
+            // Realtime for the CURRENT player's row (they pass RLS)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` }, (payload) => {
-                setPlayers(prev => {
-                    if (payload.eventType === 'INSERT') {
-                        // Prevent duplicates by checking BOTH the database primary key AND the user's string ID
-                        if (prev.some(p => p.id === payload.new.id || p.user_id === payload.new.user_id)) return prev
-                        return [...prev, payload.new]
-                    }
-                    if (payload.eventType === 'UPDATE') return prev.map(p => p.id === payload.new.id ? payload.new : p)
-                    if (payload.eventType === 'DELETE') return prev.filter(p => p.id !== payload.old.id)
-                    return prev
-                })
                 if (meRef.current && payload.new?.user_id === meRef.current.user_id) {
                     setMe(payload.new)
                 }
+                // Update local state if it's the current player
+                setPlayers(prev => {
+                    if (payload.eventType === 'INSERT') {
+                        if (prev.some(p => p.id === payload.new.id || p.user_id === payload.new.user_id)) return prev
+                        return [...prev, payload.new]
+                    }
+                    if (payload.eventType === 'UPDATE') return prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p)
+                    if (payload.eventType === 'DELETE') return prev.filter(p => p.id !== payload.old.id)
+                    return prev
+                })
+            })
+            // Realtime for everyone else via the view (if supported) or polling fallback
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'public_players', filter: `room_id=eq.${roomId}` }, (payload) => {
+                setPlayers(prev => {
+                    if (payload.eventType === 'INSERT') {
+                        if (prev.some(p => p.id === payload.new.id || p.user_id === payload.new.user_id)) return prev
+                        return [...prev, payload.new]
+                    }
+                    if (payload.eventType === 'UPDATE') return prev.map(p => p.id === payload.new.id ? { ...p, ...payload.new } : p)
+                    if (payload.eventType === 'DELETE') return prev.filter(p => p.id !== payload.old.id)
+                    return prev
+                })
             })
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_events', filter: `room_id=eq.${roomId}` }, (payload) => {
                 setEvents(prev => [...prev, payload.new])
+                
+                // Update players state based on game events
+                setPlayers(prev => {
+                    let newPlayers = [...prev]
+                    if (payload.new.event_type === 'night_result' || payload.new.event_type === 'day_result') {
+                        const eliminatedId = payload.new.payload?.eliminated?.id
+                        if (eliminatedId) {
+                            newPlayers = newPlayers.map(p => p.id === eliminatedId ? { ...p, is_alive: false } : p)
+                        }
+                    } else if (payload.new.event_type === 'player_ready_replay') {
+                        const readyId = payload.new.payload?.playerId
+                        if (readyId) {
+                            newPlayers = newPlayers.map(p => p.id === readyId ? { ...p, ready_for_replay: true } : p)
+                        }
+                    } else if (payload.new.event_type === 'game_reset') {
+                        newPlayers = newPlayers.map(p => ({ ...p, role: null, is_alive: true, is_protected: false, is_ready: false, ready_for_replay: false }))
+                    }
+                    return newPlayers
+                })
+
                 // Extract detective result for the detective player
                 if (payload.new.event_type === 'night_result' && meRef.current?.role === 'detective') {
                     setDetectiveOwnResult(payload.new.payload?.detectiveResult ?? null)
@@ -1283,52 +1335,53 @@ export default function GameRoom({ roomId }) {
         const finalUserId = passedUserId || ('user_' + Math.random().toString(36).substr(2, 9))
 
         try {
-            // Check if player already exists in the room
-            const { data: existingPlayer } = await getSupabase()
-                .from('players')
-                .select('*')
-                .eq('room_id', roomId)
-                .eq('user_id', finalUserId)
-                .single()
-
-            if (existingPlayer) {
-                setMe(existingPlayer)
-                if (consentGranted) {
-                    setSessionCookie({ userId: finalUserId, roomId })
-                }
-                joinInProgressRef.current = false
-                return
-            }
-        } catch (error) {
-            console.error("Error checking for existing player:", error);
-            // Continue to attempt insertion if check fails, but log the error
-        }
-
-        try {
-            if (players.length === 0 && room && !room.host_id) {
-                await getSupabase().from('rooms').update({ host_id: finalUserId }).eq('id', roomId)
-            }
-
-            let avatar_url = passedAvatarUrl || null
-            if (!avatar_url) {
+            let avatarUrl = passedAvatarUrl || null
+            if (!avatarUrl) {
                 try {
                     const stored = localStorage.getItem('mafia_user')
                     if (stored) {
                         const parsed = JSON.parse(stored)
-                        if (parsed?.avatar_url) avatar_url = parsed.avatar_url
+                        if (parsed?.avatar_url) avatarUrl = parsed.avatar_url
                     }
                 } catch { }
             }
 
-            const { data } = await getSupabase().from('players').insert([{
-                room_id: roomId, user_id: finalUserId, username, avatar_url,
-                is_alive: true, is_protected: false, role: 'villager', is_ready: false,
-            }]).select().single()
-            if (data) {
-                setMe(data)
+            const res = await fetch('/api/game/join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    roomId,
+                    userId: finalUserId,
+                    username,
+                    avatarUrl,
+                    isHost: players.length === 0 && room && !room.host_id,
+                })
+            })
+
+            const joinData = await res.json()
+            if (joinData.player) {
+                setMe(joinData.player)
                 if (consentGranted) {
                     setSessionCookie({ userId: finalUserId, roomId })
                 }
+                setPlayers(prev => {
+                    const exists = prev.some(p => p.id === joinData.player.id || p.user_id === joinData.player.user_id);
+                    if (exists) return prev;
+                    return [...prev, {
+                        id: joinData.player.id,
+                        created_at: joinData.player.created_at,
+                        room_id: joinData.player.room_id,
+                        user_id: joinData.player.user_id,
+                        username: joinData.player.username,
+                        avatar_url: joinData.player.avatar_url,
+                        is_alive: joinData.player.is_alive,
+                        is_protected: joinData.player.is_protected,
+                        is_ready: joinData.player.is_ready,
+                        ready_for_replay: joinData.player.ready_for_replay
+                    }];
+                });
+            } else {
+                console.error("Join error:", joinData.error)
             }
         } finally {
             joinInProgressRef.current = false
@@ -1406,6 +1459,14 @@ export default function GameRoom({ roomId }) {
         }
     }
 
+    const handleReplay = async () => {
+        try {
+            await api('/api/game/replay-ready', { roomId })
+        } catch (err) {
+            console.error('Replay error:', err.message)
+        }
+    }
+
     // ── Computed values ──
     const isHost = room?.host_id === me?.user_id || (!room?.host_id && players[0]?.id === me?.id)
 
@@ -1418,7 +1479,7 @@ export default function GameRoom({ roomId }) {
     const renderPhase = () => {
         // Game over
         if (phase === 'game_over' && room?.winner) {
-            return <WinScreen winner={room.winner} players={players} />
+            return <WinScreen winner={room.winner} players={players} currentUserId={me?.user_id} onReplay={handleReplay} />
         }
 
         // Lobby / join
