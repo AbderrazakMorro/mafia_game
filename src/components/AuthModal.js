@@ -80,27 +80,27 @@ export default function AuthModal({ onAuthSuccess, onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-surface/90 backdrop-blur-sm">
             <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden relative"
+                className="w-full max-w-md glass-panel bg-surface-container/95 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden relative border border-outline-variant/10"
             >
-                {/* Red accent */}
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 to-rose-900" />
+                {/* Accent line */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-container to-secondary-container" />
 
                 {/* Close button */}
                 {onClose && (
-                    <button onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors z-10">
-                        <X className="w-5 h-5" />
+                    <button onClick={onClose} className="absolute top-4 right-4 text-on-surface-variant/70 hover:text-on-surface transition-colors z-10 bg-surface-container/60 p-2 rounded-full">
+                        <X className="w-4 h-4" />
                     </button>
                 )}
 
                 <div className="p-6 pt-8">
                     <div className="text-center mb-6">
-                        <h2 className="text-2xl font-black uppercase tracking-widest text-white mb-2">Entrez dans le cercle</h2>
-                        <p className="text-zinc-400 text-sm">Identifiez-vous pour la prochaine partie</p>
+                        <h2 className="text-2xl font-black uppercase tracking-widest text-on-surface mb-2 font-display">Entrez dans le cercle</h2>
+                        <p className="text-on-surface-variant text-sm">Identifiez-vous pour la prochaine partie</p>
                     </div>
 
                     <AnimatePresence>
@@ -109,16 +109,16 @@ export default function AuthModal({ onAuthSuccess, onClose }) {
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: 'auto' }}
                                 exit={{ opacity: 0, height: 0 }}
-                                className="mb-6 bg-red-950/50 border border-red-900/50 rounded-xl p-3 flex items-start gap-3"
+                                className="mb-6 bg-secondary-container/20 rounded-xl p-3 flex items-start gap-3"
                             >
-                                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                                <p className="text-red-200 text-sm">{error}</p>
+                                <AlertCircle className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
+                                <p className="text-on-secondary-container text-sm">{error}</p>
                             </motion.div>
                         )}
                     </AnimatePresence>
 
                     {/* Tabs */}
-                    <div className="flex bg-zinc-900 rounded-xl p-1 mb-8">
+                    <div className="flex bg-surface-container-low rounded-xl p-1 mb-8">
                         {tabs.map((tab) => {
                             const Icon = tab.icon;
                             const isActive = activeTab === tab.id;
@@ -126,14 +126,14 @@ export default function AuthModal({ onAuthSuccess, onClose }) {
                                 <button
                                     key={tab.id}
                                     onClick={() => { setActiveTab(tab.id); setError(null); }}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg transition-all relative z-10 ${isActive ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg transition-all relative z-10 ${isActive ? 'text-on-surface' : 'text-on-surface-variant/70 hover:text-on-surface'}`}
                                 >
                                     <Icon className="w-4 h-4" />
                                     {tab.label}
                                     {isActive && (
                                         <motion.div
                                             layoutId="activeTab"
-                                            className="absolute inset-0 bg-zinc-800 rounded-lg -z-10"
+                                            className="absolute inset-0 bg-surface-container-highest rounded-lg -z-10"
                                             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                                         />
                                     )}
@@ -159,7 +159,7 @@ export default function AuthModal({ onAuthSuccess, onClose }) {
                                     <div className="space-y-1">
                                         <InputField icon={Key} type="password" placeholder="Mot de passe" value={loginData.password} onChange={v => setLoginData({ ...loginData, password: v })} />
                                         <div className="text-right mt-1">
-                                            <a href="/forgot-password" onClick={onClose} className="text-xs text-zinc-500 hover:text-white transition-colors pr-1">Mot de passe oublié ?</a>
+                                            <a href="/forgot-password" onClick={onClose} className="text-xs text-on-surface-variant/70 hover:text-primary transition-colors pr-1">Mot de passe oublié ?</a>
                                         </div>
                                     </div>
                                     <SubmitButton isLoading={isLoading} label="Se connecter" icon={<LogIn className="w-5 h-5" />} />
@@ -167,8 +167,8 @@ export default function AuthModal({ onAuthSuccess, onClose }) {
                             )}
                             {activeTab === 'guest' && (
                                 <motion.form key="guest" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }} onSubmit={handleGuest} className="space-y-4">
-                                    <div className="text-zinc-400 text-sm mb-2 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50 flex items-start gap-3">
-                                        <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                                    <div className="text-on-surface-variant text-sm mb-2 bg-surface-container-low/50 p-4 rounded-xl flex items-start gap-3">
+                                        <AlertCircle className="w-4 h-4 text-tertiary shrink-0 mt-0.5" />
                                         <span>Session temporaire. Vos statistiques ne seront pas sauvegardées.</span>
                                     </div>
                                     <InputField icon={Ghost} type="text" placeholder="Pseudo temporaire" value={guestData.pseudo_temp} onChange={v => setGuestData({ ...guestData, pseudo_temp: v })} />
@@ -186,11 +186,11 @@ export default function AuthModal({ onAuthSuccess, onClose }) {
 function InputField({ icon: Icon, type, placeholder, value, onChange }) {
     return (
         <div className="relative group">
-            <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 group-focus-within:text-red-400 transition-colors" />
+            <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/70 group-focus-within:text-primary transition-colors" />
             <input
                 type={type} required placeholder={placeholder} value={value}
                 onChange={e => onChange(e.target.value)}
-                className="w-full bg-zinc-900/50 border border-zinc-800 focus:border-red-500 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-red-500/50 transition-all"
+                className="w-full bg-surface-container-low/50 rounded-xl py-3 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
             />
         </div>
     );
@@ -201,7 +201,7 @@ function SubmitButton({ isLoading, label, icon }) {
         <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-4 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-3 uppercase tracking-wider text-sm shadow-lg shadow-red-900/30"
+            className="w-full mt-4 bg-gradient-to-r from-primary to-primary-container hover:from-primary/90 hover:to-primary-container/90 text-on-primary font-bold py-3.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-3 uppercase tracking-wider text-sm shadow-[0_10px_30px_rgba(109,40,217,0.3)]"
         >
             {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : icon}
             <span>{isLoading ? 'Chargement...' : label}</span>

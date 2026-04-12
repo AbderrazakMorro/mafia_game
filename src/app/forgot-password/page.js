@@ -35,33 +35,35 @@ export default function ForgotPassword() {
     }
 
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center bg-slate-950 relative overflow-hidden font-sans p-4">
-            {/* Animated Background */}
+        <main className="flex min-h-screen flex-col items-center justify-center relative overflow-hidden font-sans p-4">
+            {/* Mist Overlay */}
+            <div className="fixed inset-0 pointer-events-none mist-overlay opacity-40 z-0" />
+
+            {/* Background Glow */}
             <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
                 <motion.div
                     animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
                     transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-purple-600/30 blur-[120px] rounded-full"
+                    className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-primary-container/30 blur-[120px] rounded-full"
                 />
                 <motion.div
                     animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.4, 0.2] }}
                     transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-red-600/20 blur-[100px] rounded-full"
+                    className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-secondary-container/20 blur-[100px] rounded-full"
                 />
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none"></div>
             </div>
 
             <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden relative z-10"
+                className="w-full max-w-md glass-panel bg-surface-container/95 border border-outline-variant/10 rounded-3xl shadow-2xl overflow-hidden relative z-10"
             >
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 to-rose-900" />
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-primary-container" />
 
                 <div className="p-6 pt-8">
                     <div className="text-center mb-6">
-                        <h2 className="text-2xl font-black uppercase tracking-widest text-white mb-2">Mot de passe oublié</h2>
-                        <p className="text-zinc-400 text-sm">Entrez votre email pour réinitialiser votre mot de passe</p>
+                        <h2 className="text-2xl font-black uppercase tracking-widest text-on-surface mb-2 font-display">Mot de passe oublié</h2>
+                        <p className="text-on-surface-variant text-sm">Entrez votre email pour réinitialiser votre mot de passe</p>
                     </div>
 
                     <AnimatePresence mode="wait">
@@ -73,11 +75,11 @@ export default function ForgotPassword() {
                                 className="text-center space-y-4"
                             >
                                 <div className="flex justify-center mb-4">
-                                    <CheckCircle2 className="w-16 h-16 text-green-500" />
+                                    <CheckCircle2 className="w-16 h-16 text-emerald-400" />
                                 </div>
-                                <p className="text-green-400 font-medium tracking-wide">Lien envoyé !</p>
-                                <p className="text-zinc-400 text-sm">Si ce compte existe, un email contenant les instructions a été envoyé.</p>
-                                <Link href="/" className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mt-6 font-medium text-sm">
+                                <p className="text-emerald-400 font-medium tracking-wide">Lien envoyé !</p>
+                                <p className="text-on-surface-variant text-sm">Si ce compte existe, un email contenant les instructions a été envoyé.</p>
+                                <Link href="/" className="inline-flex items-center gap-2 text-on-surface-variant hover:text-on-surface transition-colors mt-6 font-medium text-sm">
                                     <ArrowLeft className="w-4 h-4" /> Retour à l'accueil
                                 </Link>
                             </motion.div>
@@ -89,37 +91,37 @@ export default function ForgotPassword() {
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: 'auto' }}
                                             exit={{ opacity: 0, height: 0 }}
-                                            className="bg-red-950/50 border border-red-900/50 rounded-xl p-3 flex items-start gap-3"
+                                            className="bg-secondary-container/20 rounded-xl p-3 flex items-start gap-3"
                                         >
-                                            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                                            <p className="text-red-200 text-sm">{error}</p>
+                                            <AlertCircle className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
+                                            <p className="text-on-secondary-container text-sm">{error}</p>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
 
                                 <div className="relative group">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 group-focus-within:text-red-400 transition-colors" />
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/70 group-focus-within:text-primary transition-colors" />
                                     <input
                                         type="email"
                                         required
                                         placeholder="Adresse email"
                                         value={email}
                                         onChange={e => setEmail(e.target.value)}
-                                        className="w-full bg-zinc-900/50 border border-zinc-800 focus:border-red-500 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-red-500/50 transition-all"
+                                        className="w-full bg-surface-container-low/50 rounded-xl py-3 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                                     />
                                 </div>
 
                                 <button
                                     type="submit"
                                     disabled={isLoading}
-                                    className="w-full bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-3 uppercase tracking-wider text-sm shadow-lg shadow-red-900/30 mt-6"
+                                    className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold py-3.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-3 uppercase tracking-wider text-sm shadow-[0_10px_30px_rgba(109,40,217,0.3)] mt-6"
                                 >
                                     {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Mail className="w-5 h-5" />}
                                     <span>{isLoading ? 'Envoi en cours...' : 'Envoyer le lien'}</span>
                                 </button>
 
                                 <div className="text-center mt-6">
-                                    <Link href="/" className="inline-flex items-center gap-2 text-zinc-500 hover:text-white transition-colors text-sm font-medium">
+                                    <Link href="/" className="inline-flex items-center gap-2 text-on-surface-variant/70 hover:text-on-surface transition-colors text-sm font-medium">
                                         <ArrowLeft className="w-4 h-4" /> Retour à l'accueil
                                     </Link>
                                 </div>

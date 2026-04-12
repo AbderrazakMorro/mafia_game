@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useEffect, useState, useCallback } from 'react'
+import { useGlobalAudio } from '../components/GlobalAudioProvider'
 
 // ─────────────────────────────────────────────
 // Audio configuration per game phase
@@ -48,8 +49,15 @@ function getAudioKey(phase) {
 export default function useGameAudio(phase) {
     const audioRef = useRef(null)
     const currentKeyRef = useRef(null)
-    const [isMuted, setIsMuted] = useState(false)
     const [hasInteracted, setHasInteracted] = useState(false)
+    
+    // Consume global audio context
+    const { isMuted, toggleMute, musicVolume } = useGlobalAudio();
+
+    // Helper to calc relative volume based on base config (normalized against 0.25 base)
+    const getCalculatedVolume = (baseVol) => {
+        return Math.min(1, Math.max(0, baseVol * (musicVolume / 0.25)));
+    }
 
     // Track user interaction to unlock autoplay
     useEffect(() => {
@@ -90,7 +98,7 @@ export default function useGameAudio(phase) {
         const config = AUDIO_CONFIG[key]
         const audio = new Audio(config.url)
         audio.loop = config.loop
-        audio.volume = isMuted ? 0 : config.volume
+        audio.volume = isMuted ? 0 : getCalculatedVolume(config.volume)
         audio.preload = 'auto'
         audioRef.current = audio
 
@@ -104,13 +112,14 @@ export default function useGameAudio(phase) {
         }
     }, [phase, hasInteracted])
 
-    // Mute/unmute without restarting the track
+    // Mute/unmute or volume change without restarting the track
     useEffect(() => {
         if (audioRef.current) {
             const key = currentKeyRef.current
-            audioRef.current.volume = isMuted ? 0 : (AUDIO_CONFIG[key]?.volume || 0.2)
+            const baseVol = AUDIO_CONFIG[key]?.volume || 0.2
+            audioRef.current.volume = isMuted ? 0 : getCalculatedVolume(baseVol)
         }
-    }, [isMuted])
+    }, [isMuted, musicVolume])
 
     // Cleanup on unmount
     useEffect(() => {
@@ -121,10 +130,6 @@ export default function useGameAudio(phase) {
                 audioRef.current = null
             }
         }
-    }, [])
-
-    const toggleMute = useCallback(() => {
-        setIsMuted(prev => !prev)
     }, [])
 
     return { isMuted, toggleMute }

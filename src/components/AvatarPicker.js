@@ -54,8 +54,8 @@ export default function AvatarPicker({ currentAvatar, onSelect }) {
                         key={style}
                         onClick={() => setSelectedStyle(style)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${selectedStyle === style
-                                ? 'bg-red-600 text-white'
-                                : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                                ? 'bg-primary-container text-primary shadow-md'
+                                : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface'
                             }`}
                     >
                         {STYLE_LABELS[style] || style}
@@ -73,24 +73,24 @@ export default function AvatarPicker({ currentAvatar, onSelect }) {
                             whileHover={{ scale: 1.08 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => handleSelect(url)}
-                            className={`relative aspect-square rounded-2xl overflow-hidden border-2 transition-all ${isSelected
-                                    ? 'border-red-500 shadow-lg shadow-red-900/40'
-                                    : 'border-zinc-800 hover:border-zinc-600'
+                            className={`relative aspect-square rounded-2xl overflow-hidden transition-all ${isSelected
+                                    ? 'ring-2 ring-primary shadow-[0_0_15px_rgba(109,40,217,0.3)]'
+                                    : 'ring-1 ring-outline-variant/20 hover:ring-outline-variant/50'
                                 }`}
                         >
                             <img
                                 src={url}
                                 alt={`Avatar ${seed}`}
-                                className="w-full h-full object-cover bg-zinc-900"
+                                className="w-full h-full object-cover bg-surface-container-lowest"
                                 loading="lazy"
                             />
                             {isSelected && (
                                 <motion.div
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
-                                    className="absolute inset-0 bg-red-600/30 flex items-center justify-center"
+                                    className="absolute inset-0 bg-primary/30 flex items-center justify-center"
                                 >
-                                    <Check className="w-6 h-6 text-white drop-shadow-lg" />
+                                    <Check className="w-6 h-6 text-on-surface drop-shadow-lg" />
                                 </motion.div>
                             )}
                         </motion.button>
@@ -101,7 +101,7 @@ export default function AvatarPicker({ currentAvatar, onSelect }) {
             {/* Regenerate */}
             <button
                 onClick={regenerate}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-zinc-400 hover:text-white text-sm font-medium transition-all"
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-surface-container-low hover:bg-surface-container-highest rounded-xl text-on-surface-variant hover:text-on-surface text-sm font-medium transition-all"
             >
                 <RefreshCw className="w-4 h-4" />
                 Générer d&apos;autres avatars

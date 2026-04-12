@@ -1,9 +1,13 @@
+import { Space_Grotesk, Inter } from 'next/font/google'
 import './globals.css'
 import AuthProvider from '../components/AuthProvider'
 import GlobalAudioProvider from '../components/GlobalAudioProvider'
 
+const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space' })
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+
 export const viewport = {
-    themeColor: '#1a1a1a',
+    themeColor: '#131317',
     width: 'device-width',
     initialScale: 1,
     maximumScale: 1,
@@ -54,7 +58,7 @@ export default function RootLayout({ children }) {
     }
 
     return (
-        <html lang="fr">
+        <html lang="fr" className={`${spaceGrotesk.variable} ${inter.variable}`}>
             <head>
                 <link rel="apple-touch-icon" href="/icon-192x192.png" />
                 <link rel="apple-touch-icon" sizes="180x180" href="/icon-192x192.png" />

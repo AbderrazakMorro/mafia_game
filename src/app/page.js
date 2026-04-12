@@ -9,12 +9,15 @@ import { getSupabase } from '../lib/supabase'
 import { useAuth } from '../components/AuthProvider'
 import ProfileModal from '../components/ProfileModal'
 import { useGlobalAudio } from '../components/GlobalAudioProvider'
+import AudioSettingsModal from '../components/AudioSettingsModal'
 import Link from 'next/link'
 import {
     Sword, LogIn, UserPlus, UserCircle, LogOut,
     Play, Loader2, Smartphone, DoorOpen, Hash,
     Globe, Lock, Settings, Users, Sparkles, AlertCircle, Crown, Clock,
-    BookOpen, Shield, Trash2, Volume2, VolumeX
+    BookOpen, Shield, Trash2, Volume2, VolumeX,
+    Bell, Filter, RefreshCw, MessageSquare, Search,
+    Eye, History, Crosshair, UserCheck, UserX, ChevronRight, Mail
 } from 'lucide-react'
 
 export default function Home() {
@@ -32,13 +35,17 @@ export default function Home() {
     const [isFetchingMyRooms, setIsFetchingMyRooms] = useState(true)
     const [myPendingRequests, setMyPendingRequests] = useState([])
     const [joinLoadingId, setJoinLoadingId] = useState(null)
-    const { isMuted: globalMuted, toggleMute: toggleGlobalMute } = useGlobalAudio()
+    const { playSFX, isMuted: globalMuted } = useGlobalAudio()
+    const [showJoinCodeModal, setShowJoinCodeModal] = useState(false)
+    const [showAudioSettings, setShowAudioSettings] = useState(false)
     const [createSettings, setCreateSettings] = useState({
         name: '',
         isPublic: true,
         maxPlayers: 8
     })
+    const [showMobileTeaser, setShowMobileTeaser] = useState(false)
 
+    // ─── PWA Install ───
     useEffect(() => {
         const handleBeforeInstallPrompt = (e) => {
             e.preventDefault()
@@ -53,35 +60,31 @@ export default function Home() {
         if (!deferredPrompt) return
         deferredPrompt.prompt()
         const { outcome } = await deferredPrompt.userChoice
-        if (outcome === 'accepted') {
-            setIsInstallable(false)
-        }
+        if (outcome === 'accepted') setIsInstallable(false)
         setDeferredPrompt(null)
     }
 
+    // ─── Room cleanup ───
     useEffect(() => {
-        // Run cleanup API every 60 seconds quietly in the background
         const triggerCleanup = () => {
             fetch('/api/cron/cleanup-rooms', { method: 'POST' }).catch(err => console.error("Cleanup ping failed:", err));
         }
         triggerCleanup();
-        const cleanupInterval = setInterval(triggerCleanup, 60000); // 1 minute
+        const cleanupInterval = setInterval(triggerCleanup, 60000);
         return () => clearInterval(cleanupInterval);
     }, []);
 
+    // ─── Public rooms fetch + realtime ───
     useEffect(() => {
         const fetchPublicRooms = async () => {
             setIsFetchingRooms(true)
             const supa = getSupabase()
-
-            // Get public rooms that are in lobby phase
-            const { data, error } = await supa
+            const { data } = await supa
                 .from('rooms')
                 .select('*, players(count)')
                 .eq('is_public', true)
                 .eq('status', 'lobby')
                 .order('created_at', { ascending: false })
-
             if (data) setPublicRooms(data)
             setIsFetchingRooms(false)
         }
@@ -92,11 +95,10 @@ export default function Home() {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, fetchPublicRooms)
             .subscribe()
 
-        return () => {
-            getSupabase().removeChannel(channel)
-        }
+        return () => { getSupabase().removeChannel(channel) }
     }, [])
 
+    // ─── My rooms + pending requests ───
     useEffect(() => {
         if (!user) {
             setMyRooms([])
@@ -107,12 +109,11 @@ export default function Home() {
         const fetchMyRooms = async () => {
             setIsFetchingMyRooms(true)
             const supa = getSupabase()
-            const { data, error } = await supa
+            const { data } = await supa
                 .from('rooms')
                 .select('*, players(count)')
                 .eq('host_id', user.id)
                 .order('created_at', { ascending: false })
-
             if (data) setMyRooms(data)
             setIsFetchingMyRooms(false)
         }
@@ -124,7 +125,6 @@ export default function Home() {
                 .select('*, rooms(name, code, host_id)')
                 .eq('user_id', user.id)
                 .eq('status', 'pending')
-
             if (data) setMyPendingRequests(data)
         }
 
@@ -136,7 +136,6 @@ export default function Home() {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, fetchMyRooms)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'join_requests', filter: `user_id=eq.${user.id}` }, (payload) => {
                 if (payload.new.status === 'accepted') {
-                    // Automatically route when accepted
                     router.push(`/room/${payload.new.room_id}`)
                 } else if (payload.new.status === 'rejected') {
                     alert("Votre demande d'accès a été refusée par l'hôte.")
@@ -147,17 +146,13 @@ export default function Home() {
             })
             .subscribe()
 
-        return () => {
-            getSupabase().removeChannel(channel)
-        }
+        return () => { getSupabase().removeChannel(channel) }
     }, [user, router])
 
+    // ─── Handlers ───
     const createRoom = async (e) => {
         e.preventDefault()
-        if (!user) {
-            openAuthModal()
-            return
-        }
+        if (!user) { openAuthModal(); return }
         try {
             setIsCreating(true)
             const res = await fetch('/api/game/create', {
@@ -170,10 +165,8 @@ export default function Home() {
                     hostId: user.id
                 })
             })
-
             const data = await res.json()
             if (!res.ok) throw new Error(data.error)
-
             router.push(`/room/${data.room.id}`)
         } catch (err) {
             console.error("Exception lors de la création:", err)
@@ -183,35 +176,23 @@ export default function Home() {
     }
 
     const joinPublicRoom = async (roomId) => {
-        if (!user) {
-            openAuthModal()
-            return
-        }
+        if (!user) { openAuthModal(); return }
         setJoinLoadingId(roomId)
         try {
             const res = await fetch('/api/game/request-join', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    roomId,
-                    userId: user.id,
+                    roomId, userId: user.id,
                     username: user.pseudo,
                     avatarUrl: user.avatar_url || ''
                 })
             })
             const data = await res.json()
-
             if (!res.ok) throw new Error(data.error)
-
-            // If user is already the host of this room, just jump in
             const isHost = publicRooms.find(r => r.id === roomId)?.host_id === user.id;
-            if (isHost) {
-                router.push(`/room/${roomId}`)
-            } else {
-                // Otherwise update requests list to show pending status
-                // The useEffect realtime hook will catch this and update state, but let's visually signify it
-                setJoinLoadingId(null)
-            }
+            if (isHost) router.push(`/room/${roomId}`)
+            else setJoinLoadingId(null)
         } catch (err) {
             console.error(err)
             alert(err.message)
@@ -230,534 +211,655 @@ export default function Home() {
             const data = await res.json()
             if (!res.ok) throw new Error(data.error)
             setMyRooms(prev => prev.filter(r => r.id !== roomId))
-        } catch (err) {
-            alert('Erreur: ' + err.message)
-        }
+        } catch (err) { alert('Erreur: ' + err.message) }
     }
 
     const joinRoom = async (e) => {
         e.preventDefault()
         if (!joinCode.trim()) return
-        if (!user) {
-            openAuthModal()
-            return
-        }
+        if (!user) { openAuthModal(); return }
         try {
             const supa = getSupabase()
-            if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-                alert("Erreur de configuration: NEXT_PUBLIC_SUPABASE_URL ou KEY manquante dans Vercel.")
-                return
-            }
             const { data: room, error } = await supa
-                .from('rooms')
-                .select('id, host_id')
-                .eq('code', joinCode.toUpperCase())
-                .single()
-
+                .from('rooms').select('id, host_id')
+                .eq('code', joinCode.toUpperCase()).single()
             if (error || !room) {
-                console.error("Erreur joinRoom:", error)
-                alert("Code invalide ou salle introuvable. " + (error ? error.message : ""))
+                alert("Code invalide ou salle introuvable.")
                 return
             }
-
             if (room.host_id === user.id) {
                 router.push(`/room/${room.id}`)
                 return;
             }
-
-            // Not the host, create a join request instead of directly navigating
             const res = await fetch('/api/game/request-join', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    roomId: room.id,
-                    userId: user.id,
+                    roomId: room.id, userId: user.id,
                     username: user.pseudo,
                     avatarUrl: user.avatar_url || ''
                 })
             })
             const reqData = await res.json()
             if (!res.ok) throw new Error(reqData.error)
-
-            // Empty join code so user sees something happened
             setJoinCode('')
+            setShowJoinCodeModal(false)
         } catch (err) {
-            console.error("Exception lors de la connexion:", err)
-            alert("Exception interne: " + (err.message || err.toString()))
+            alert("Erreur: " + (err.message || err.toString()))
         }
     }
 
+    // ─── Helpers ───
+    const allRooms = [...myRooms.filter(r => r.status === 'lobby'), ...publicRooms.filter(pr => !myRooms.some(mr => mr.id === pr.id))]
+
     return (
         <>
-            <main className="flex min-h-screen flex-col items-center bg-slate-950 relative overflow-hidden font-sans">
-                {/* Animated Background */}
-                <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
-                    <motion.div
-                        animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-                        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                        className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-purple-600/30 blur-[120px] rounded-full"
-                    />
-                    <motion.div
-                        animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.4, 0.2] }}
-                        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                        className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-red-600/20 blur-[100px] rounded-full"
-                    />
-                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none"></div>
+            {/* ── Mist Overlay (atmosphere) ── */}
+            <div className="fixed inset-0 pointer-events-none mist-overlay opacity-40 z-0" />
+
+            {/* ══════════════════════════════════════════════ */}
+            {/* TOP APP BAR                                    */}
+            {/* ══════════════════════════════════════════════ */}
+            <header className="fixed top-0 w-full z-50 flex justify-between items-center px-4 sm:px-6 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+                <div className="flex items-center gap-3">
+                    <Sword className="w-5 h-5 text-primary drop-shadow-[0_0_10px_rgba(211,187,255,0.3)]" />
+                    <span className="text-lg sm:text-xl font-black tracking-[0.05em] text-primary drop-shadow-[0_0_10px_rgba(211,187,255,0.3)] font-display uppercase">
+                        MAFIA ONLINE
+                    </span>
                 </div>
 
-                <motion.header
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between z-20 relative"
-                >
-                    <div className="flex items-center gap-2.5">
-                        <Sword className="w-5 h-5 sm:w-6 sm:h-6 text-red-500" />
-                        <span className="text-white font-black text-sm sm:text-lg uppercase tracking-widest hidden sm:inline">Mafia Online</span>
-                        <span className="text-white font-black text-sm sm:text-lg uppercase tracking-widest sm:hidden">Mafia</span>
-                    </div>
+                {/* Desktop Nav */}
+                <nav className="hidden md:flex items-center gap-8">
+                    <a className="font-display tracking-[0.05em] uppercase text-primary border-b-2 border-primary py-1 text-sm font-bold cursor-pointer">Lobby</a>
+                    <Link href="/game-rules" className="font-display tracking-[0.05em] uppercase text-on-surface/60 hover:text-primary transition-all py-1 text-sm font-bold">Intel</Link>
+                    <Link href="/privacy-policy" className="font-display tracking-[0.05em] uppercase text-on-surface/60 hover:text-primary transition-all py-1 text-sm font-bold">Archive</Link>
+                </nav>
 
-                    <div className="flex items-center gap-3">
-                        {!isInitializing && (
-                            <>
-                                {user ? (
-                                    <>
-                                        <button
-                                            onClick={() => setShowProfile(true)}
-                                            className="flex items-center gap-2 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 px-3 py-1.5 rounded-xl text-sm text-white font-medium transition-all"
-                                        >
-                                            {user.avatar_url ? (
-                                                <img src={user.avatar_url} alt={user.pseudo} className="w-7 h-7 rounded-full border border-red-600/50" loading="lazy" />
-                                            ) : (
-                                                <UserCircle className="w-5 h-5 text-red-400" />
-                                            )}
-                                            {user.pseudo}
-                                        </button>
-                                        <button
-                                            onClick={logout}
-                                            className="flex items-center gap-2 bg-zinc-900/80 hover:bg-red-950/50 border border-zinc-800 hover:border-red-900/50 px-3 py-2 rounded-xl text-sm text-zinc-400 hover:text-red-300 font-medium transition-all"
-                                            title="Déconnexion"
-                                        >
-                                            <LogOut className="w-4 h-4" />
-                                        </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={openAuthModal}
-                                            className="flex items-center gap-2 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 px-4 py-2 rounded-xl text-sm text-white font-medium transition-all"
-                                        >
-                                            <LogIn className="w-4 h-4" />
-                                            Se connecter
-                                        </button>
-                                        <button
-                                            onClick={openAuthModal}
-                                            className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 px-4 py-2 rounded-xl text-sm text-white font-bold transition-all shadow-lg shadow-red-900/30"
-                                        >
-                                            <UserPlus className="w-4 h-4" />
-                                            Créer un compte
-                                        </button>
-                                    </>
-                                )}
-                            </>
-                        )}
-                    </div>
-                </motion.header>
+                {/* Right controls */}
+                <div className="flex items-center gap-3">
+                    <button onClick={() => { playSFX('click'); setShowAudioSettings(true); }} className="text-on-surface/60 hover:text-primary transition-all p-1" title="Paramètres Audio">
+                        <Settings className="w-5 h-5" />
+                    </button>
 
-                {/* ── HERO ── */}
-                <div className="flex flex-1 flex-col items-center justify-center px-4 z-10 w-full max-w-md">
-                    <motion.div
-                        initial={{ opacity: 0, y: 40 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, type: "spring", bounce: 0.4 }}
-                        className="w-full flex flex-col items-center"
+                    {!isInitializing && (
+                        <>
+                            {user ? (
+                                <>
+                                    <button
+                                        onClick={() => setShowProfile(true)}
+                                        className="relative flex items-center"
+                                    >
+                                        {user.avatar_url ? (
+                                            <img src={user.avatar_url} alt={user.pseudo} className="w-10 h-10 rounded-full border-2 border-primary/30 object-cover" loading="lazy" />
+                                        ) : (
+                                            <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-primary font-black text-sm">
+                                                {user.pseudo?.[0]?.toUpperCase()}
+                                            </div>
+                                        )}
+                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-primary rounded-full border-2 border-surface shadow-[0_0_8px_#d3bbff]" />
+                                    </button>
+                                    <button onClick={logout} className="text-on-surface/60 hover:text-secondary transition-all p-1" title="Déconnexion">
+                                        <LogOut className="w-5 h-5" />
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button onClick={openAuthModal} className="flex items-center gap-2 bg-surface-container-highest/50 hover:bg-surface-container-highest px-4 py-2 rounded-xl text-sm text-on-surface font-bold transition-all">
+                                        <LogIn className="w-4 h-4" /> Se connecter
+                                    </button>
+                                    <button onClick={openAuthModal} className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-primary-container to-primary px-4 py-2 rounded-xl text-sm text-on-primary font-bold transition-all shadow-[0_10px_30px_rgba(109,40,217,0.4)]">
+                                        <UserPlus className="w-4 h-4" /> Créer un compte
+                                    </button>
+                                </>
+                            )}
+                        </>
+                    )}
+                </div>
+            </header>
+
+            {/* ══════════════════════════════════════════════ */}
+            {/* SIDE NAV BAR (Desktop)                         */}
+            {/* ══════════════════════════════════════════════ */}
+            <aside className="hidden md:flex flex-col py-20 items-center overflow-hidden h-screen sidebar-nav fixed left-0 z-40 bg-surface/95 backdrop-blur-2xl shadow-[40px_0_60px_rgba(0,0,0,0.8)]">
+                {/* User profile section */}
+                {user && (
+                    <div className="mb-10 flex flex-col items-center sidebar-items w-full px-4">
+                        <div className="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center mb-2 shrink-0">
+                            {user.avatar_url ? (
+                                <img src={user.avatar_url} alt="" className="w-full h-full rounded-xl object-cover" />
+                            ) : (
+                                <UserCircle className="w-6 h-6 text-primary" />
+                            )}
+                        </div>
+                        <div className="sidebar-profile-info">
+                            <p className="text-lg font-black text-primary font-display uppercase tracking-tighter">{user.pseudo}</p>
+                            <p className="text-[10px] text-on-surface-variant font-display uppercase tracking-widest opacity-60">Opérateur</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Nav items */}
+                <nav className="flex flex-col w-full gap-1">
+                    <a className="flex items-center gap-4 px-6 py-4 bg-gradient-to-r from-primary-container/20 to-transparent text-primary border-l-4 border-primary transition-all cursor-pointer">
+                        <Crosshair className="w-5 h-5 shrink-0" />
+                        <span className="sidebar-label font-display text-sm uppercase tracking-tighter font-bold">Lobby</span>
+                    </a>
+                    <button onClick={() => user ? setShowProfile(true) : openAuthModal()} className="flex items-center gap-4 px-6 py-4 text-on-surface/40 hover:bg-surface-container hover:text-on-surface transition-all text-left">
+                        <UserCircle className="w-5 h-5 shrink-0" />
+                        <span className="sidebar-label font-display text-sm uppercase tracking-tighter font-bold">Dossier</span>
+                    </button>
+                    <Link href="/game-rules" className="flex items-center gap-4 px-6 py-4 text-on-surface/40 hover:bg-surface-container hover:text-on-surface transition-all">
+                        <Eye className="w-5 h-5 shrink-0" />
+                        <span className="sidebar-label font-display text-sm uppercase tracking-tighter font-bold">Intel</span>
+                    </Link>
+                    <Link href="/privacy-policy" className="flex items-center gap-4 px-6 py-4 text-on-surface/40 hover:bg-surface-container hover:text-on-surface transition-all">
+                        <History className="w-5 h-5 shrink-0" />
+                        <span className="sidebar-label font-display text-sm uppercase tracking-tighter font-bold">Archive</span>
+                    </Link>
+                </nav>
+
+                {/* Recruit button */}
+                <div className="mt-auto px-4 w-full pb-4">
+                    <button
+                        onClick={() => { if (!user) openAuthModal(); else setShowCreateModal(true); }}
+                        className="sidebar-recruit w-full bg-primary-container text-primary font-bold py-3 rounded-xl transition-all hover:shadow-[0_0_20px_rgba(109,40,217,0.4)] font-display tracking-widest text-xs uppercase"
                     >
-                        <header className="relative mb-2 w-full text-center">
-                            <motion.div
-                                animate={{ opacity: [0.5, 1, 0.5] }}
-                                transition={{ duration: 3, repeat: Infinity }}
-                                className="absolute inset-0 blur-2xl bg-gradient-to-r from-red-600 to-purple-600 opacity-50"
-                            />
-                            <h1 className="relative text-7xl md:text-8xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-red-500 via-rose-400 to-orange-500 uppercase drop-shadow-lg text-center" title="Play Mafia Online">
-                                Mafia
+                        Héberger
+                    </button>
+                </div>
+            </aside>
+
+            {/* ══════════════════════════════════════════════ */}
+            {/* RIGHT SIDEBAR (Ad Space Placeholder)               */}
+            {/* ══════════════════════════════════════════════ */}
+            <aside className="hidden lg:flex fixed right-0 top-16 h-[calc(100vh-4rem)] w-80 bg-surface/30 border-l border-outline-variant/10 backdrop-blur-sm z-30 flex-col items-center justify-center p-6 pb-20">
+                <div className="w-full h-full border-2 border-dashed border-outline-variant/20 rounded-3xl flex flex-col justify-center items-center gap-4 text-on-surface-variant/40 bg-surface-container-lowest/30 overflow-hidden relative group transition-all hover:border-primary/30 hover:bg-surface-container-lowest/50">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="bg-surface-container-high/50 p-4 rounded-full">
+                        <Sparkles className="w-6 h-6 opacity-60 text-primary" />
+                    </div>
+                    <div className="text-center font-display tracking-widest text-xs uppercase font-bold relative z-10 px-4">
+                        <span className="text-on-surface-variant font-black tracking-[0.2em] opacity-80">Espace Ad</span><br/>
+                        <span className="text-[9px] opacity-50 font-sans tracking-tight font-normal mt-2 block">Sera dédié à la publicité ultérieurement</span>
+                    </div>
+                </div>
+            </aside>
+
+            {/* ══════════════════════════════════════════════ */}
+            {/* MAIN CONTENT                                   */}
+            {/* ══════════════════════════════════════════════ */}
+            <main className="pt-24 pb-32 md:pb-8 px-4 sm:px-6 md:pl-28 lg:pr-80 max-w-[1600px] mx-auto min-h-screen relative z-10">
+
+                {/* ── Hero Section ── */}
+                <motion.section
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8 }}
+                    className="mb-12 relative rounded-3xl overflow-hidden min-h-[360px] sm:min-h-[400px] flex items-center lg:items-end p-6 sm:p-8 md:p-12"
+                >
+                    {/* Hero background image */}
+                    <img
+                        alt="Cinematic noir city alley"
+                        className="absolute inset-0 w-full h-full object-cover"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOyrAu2nK7Pk3hM5nE51Px7-j4Y3XHfZiooqXmEPLSjV6-zqpEO0QgfYAhAym5LOY0rwIdda8S5i0QF_BU9LmvhxmP14h8XR7OV_76uxla5SG6ENEoZ5WcXrpIN7zg0vK7zGeOl2SAV2EGc7RTJCHXDUWl5gfYY_aOHNQHky1M9DgjcdxjNavC8Y030u1m2YXbJIBV4Fi9zASMT3FpkP61A1rJSEzDDgWvi8fuiss8Fhbj6sAB1fHgU7L2JkYz5-3aqih7o7gEswI"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-surface via-surface/80 to-transparent" />
+
+                    <div className="relative z-10 w-full flex flex-col lg:flex-row justify-between items-end lg:items-center gap-8 lg:gap-12 mt-auto lg:mt-0">
+                        {/* Text Content */}
+                        <div className="w-full lg:w-1/2 flex flex-col justify-end h-full">
+                            <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-on-surface mb-6 leading-tight tracking-tight drop-shadow-xl">
+                                TRUST <span className="text-primary italic">NO ONE.</span><br />SURVIVE THE NIGHT.
                             </h1>
-                            <h2 className="sr-only">Multiplayer Social Deduction Game</h2>
-                        </header>
-
-                        <p className="text-purple-200/70 font-medium mb-10 text-center tracking-[0.3em] text-sm uppercase">
-                            {user ? `Prêt pour la prochaine traque, ${user.pseudo} ?` : 'La ville s\'endort...'}
-                        </p>
-
-                        <section className="w-full bg-white/5 backdrop-blur-2xl p-8 rounded-[2rem] border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.36)] flex flex-col gap-6 relative overflow-hidden" aria-labelledby="join-game">
-                            <h3 id="join-game" className="sr-only">Join Real-Time Mafia Game</h3>
-                            <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
-
-                            {/* Create Room */}
-                            <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => {
-                                    if (!user) openAuthModal()
-                                    else setShowCreateModal(true)
-                                }}
-                                className="relative w-full group rounded-2xl p-[2px] overflow-hidden"
-                            >
-                                <span className="absolute inset-0 bg-gradient-to-r from-red-500 via-purple-500 to-red-500 rounded-2xl opacity-70 group-hover:opacity-100 transition-opacity blur-sm"></span>
-                                <div className="relative bg-slate-900/90 group-hover:bg-slate-900/70 transition-colors backdrop-blur-sm rounded-2xl px-8 py-5 flex items-center justify-center border border-white/5">
-                                    <span className="text-white font-bold text-lg uppercase tracking-widest drop-shadow-md flex items-center gap-3">
-                                        <Sparkles className="w-5 h-5 text-purple-400 animate-pulse" /> Héberger une Partie
-                                    </span>
-                                </div>
-                            </motion.button>
-
-                            {/* Divider */}
-                            <div className="relative flex items-center py-2 opacity-50">
-                                <div className="flex-grow border-t border-white/20"></div>
-                                <span className="flex-shrink-0 mx-4 text-white/50 font-medium text-xs tracking-widest uppercase">code d'invitation privé</span>
-                                <div className="flex-grow border-t border-white/20"></div>
-                            </div>
-
-                            {/* Join Room */}
-                            <form onSubmit={joinRoom} className="flex flex-col gap-4 relative z-10">
-                                <div className="relative group">
-                                    <Hash className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30 group-focus-within:text-purple-400 transition-colors" />
-                                    <input
-                                        type="text"
-                                        placeholder="Code de la salle"
-                                        value={joinCode}
-                                        onChange={(e) => setJoinCode(e.target.value)}
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-14 pr-6 py-5 text-center text-white text-xl font-bold tracking-[0.2em] uppercase focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 transition-all placeholder:text-white/20 placeholder:normal-case placeholder:tracking-normal placeholder:font-normal placeholder:text-base backdrop-blur-md"
-                                        maxLength={6}
-                                    />
-                                </div>
+                            <p className="text-on-surface-variant text-sm sm:text-base mb-6 max-w-md drop-shadow-md font-medium">
+                                {user ? `Prêt pour la prochaine traque, ${user.pseudo} ?` : "La ville s'endort... Rejoins la partie."}
+                            </p>
+                            <div className="flex flex-wrap gap-3 sm:gap-4">
                                 <motion.button
-                                    whileHover={{ scale: joinCode.length >= 3 ? 1.02 : 1 }}
-                                    whileTap={{ scale: joinCode.length >= 3 ? 0.98 : 1 }}
-                                    type="submit"
-                                    disabled={joinCode.length < 3}
-                                    className="w-full bg-white/10 hover:bg-white/20 border border-white/10 text-white font-bold py-5 rounded-2xl transition-all disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-widest text-sm backdrop-blur-md shadow-lg flex items-center justify-center gap-3"
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => { 
+                                        playSFX('click');
+                                        if (!user) openAuthModal(); 
+                                        else setShowCreateModal(true); 
+                                    }}
+                                    className="bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold px-6 sm:px-8 py-3 sm:py-4 rounded-xl flex items-center gap-2 transition-all shadow-[0_10px_30px_rgba(109,40,217,0.4)] text-sm sm:text-base tracking-widest uppercase"
                                 >
-                                    <DoorOpen className="w-5 h-5" />
-                                    Rejoindre la salle
+                                    <Sparkles className="w-5 h-5" />
+                                    Héberger
                                 </motion.button>
-                            </form>
 
-                            {/* PWA Install */}
-                            <AnimatePresence>
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => { playSFX('click'); setShowJoinCodeModal(true); }}
+                                    className="bg-surface-container-highest/80 border border-outline-variant/30 text-on-surface font-bold px-6 sm:px-8 py-3 sm:py-4 rounded-xl flex items-center gap-2 transition-all backdrop-blur-md text-sm sm:text-base tracking-widest uppercase hover:bg-surface-container-highest"
+                                >
+                                    <Hash className="w-5 h-5" />
+                                    Rejoindre
+                                </motion.button>
+
                                 {isInstallable && (
                                     <motion.button
-                                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                                        animate={{ opacity: 1, height: 'auto', marginTop: 8 }}
-                                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
                                         whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
+                                        whileTap={{ scale: 0.95 }}
                                         onClick={handleInstallClick}
-                                        className="w-full bg-gradient-to-r from-emerald-600/80 to-teal-600/80 hover:from-emerald-500/90 hover:to-teal-500/90 border border-emerald-500/50 text-white font-bold py-4 rounded-2xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] flex items-center justify-center gap-2 uppercase tracking-widest text-sm backdrop-blur-md overflow-hidden relative"
+                                        className="hidden xl:flex bg-white/5 backdrop-blur-md text-on-surface-variant font-bold tracking-widest uppercase px-6 py-4 rounded-xl items-center gap-2 hover:text-on-surface hover:bg-white/10 transition-all text-sm"
                                     >
-                                        <Smartphone className="w-5 h-5" /> Installer l&apos;application
+                                        <Smartphone className="w-5 h-5" />
+                                        Installer
                                     </motion.button>
                                 )}
-                            </AnimatePresence>
-                        </section>
 
-                        {/* Mes Salles (My Created Rooms) */}
-                        {user && (
-                            <section className="mt-8 w-full max-w-2xl bg-black/40 backdrop-blur-xl rounded-[2rem] border border-white/5 p-6 shadow-2xl">
-                                <h3 className="text-white font-black text-xl flex items-center gap-2 uppercase tracking-widest mb-6 border-b border-white/10 pb-4">
-                                    <Crown className="w-5 h-5 text-yellow-400" /> Mes Salles
-                                    <span className="ml-auto text-xs font-medium bg-white/10 px-3 py-1 rounded-full text-white/60">
-                                        {myRooms.length} serveur(s)
-                                    </span>
-                                </h3>
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => { playSFX('click'); setShowMobileTeaser(true); }}
+                                    className="md:hidden bg-surface-container-highest/80 border border-outline-variant/30 text-on-surface font-bold px-6 py-3 rounded-xl flex items-center gap-2 transition-all backdrop-blur-md text-sm tracking-widest uppercase hover:bg-surface-container-highest shadow-xl"
+                                >
+                                    <Play className="w-5 h-5 text-primary" />
+                                    Teaser
+                                </motion.button>
+                            </div>
+                        </div>
 
-                                {isFetchingMyRooms ? (
-                                    <div className="flex justify-center p-8">
-                                        <Loader2 className="w-8 h-8 text-yellow-500 animate-spin" />
-                                    </div>
-                                ) : myRooms.length === 0 ? (
-                                    <div className="text-center py-8 bg-white/5 rounded-2xl border border-white/5 border-dashed">
-                                        <DoorOpen className="w-8 h-8 text-white/20 mx-auto mb-3" />
-                                        <p className="text-white/40 font-medium text-sm">Vous n'avez créé aucune salle.</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                                        <AnimatePresence>
-                                            {myRooms.map(room => {
-                                                const playerCount = room.players[0]?.count || 0
-                                                const isFull = playerCount >= room.max_players
+                        {/* Video Teaser */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, x: 20 }}
+                            animate={{ opacity: 1, scale: 1, x: 0 }}
+                            transition={{ duration: 0.8, delay: 0.2 }}
+                            className="w-full md:w-1/3 lg:w-1/4 xl:w-[280px] hidden md:block ml-auto"
+                        >
+                            <div className="relative rounded-[2rem] overflow-hidden glass-panel border border-outline-variant/20 shadow-2xl group aspect-[9/16]">
+                                <video 
+                                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500 saturate-[0.8]"
+                                    loop 
+                                    controls
+                                    muted={globalMuted} 
 
-                                                return (
-                                                    <motion.div
-                                                        key={room.id}
-                                                        initial={{ opacity: 0, scale: 0.95 }}
-                                                        animate={{ opacity: 1, scale: 1 }}
-                                                        exit={{ opacity: 0, scale: 0.95 }}
-                                                        className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-white/10 transition-colors"
-                                                    >
-                                                        <div>
-                                                            <div className="flex items-center gap-2">
-                                                                <h4 className="text-white font-bold text-lg">{room.name || 'Partie Sans Nom'}</h4>
-                                                                {!room.is_public && <Lock className="w-3.5 h-3.5 text-zinc-400" title="Privé" />}
-                                                                <span className={`text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-md ${room.status === 'lobby' ? 'bg-blue-500/20 text-blue-300' : 'bg-red-500/20 text-red-300'}`}>
-                                                                    {room.status === 'lobby' ? 'En attente' : 'En cours'}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex items-center gap-3 mt-1.5 text-xs font-medium uppercase tracking-wider text-white/50">
-                                                                <span className="flex items-center gap-1">
-                                                                    <Hash className="w-3.5 h-3.5" /> {room.code}
-                                                                </span>
-                                                                <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${isFull ? 'bg-red-500/20 text-red-300' : 'bg-green-500/20 text-green-300'}`}>
-                                                                    <Users className="w-3.5 h-3.5" /> {playerCount} / {room.max_players} Joueurs
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-2 w-full sm:w-auto">
-                                                            <button
-                                                                onClick={() => router.push(`/room/${room.id}`)}
-                                                                className="flex-1 sm:flex-initial bg-yellow-600/80 hover:bg-yellow-500 border border-yellow-500 text-white font-bold py-2 px-6 rounded-xl transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-widest shrink-0 shadow-lg"
-                                                            >
-                                                                Gérer / Rejoindre
-                                                            </button>
-                                                            {room.status === 'lobby' && (
-                                                                <button
-                                                                    onClick={() => deleteRoom(room.id)}
-                                                                    className="bg-red-950/60 hover:bg-red-600 border border-red-900/50 hover:border-red-500 text-red-400 hover:text-white py-2 px-3 rounded-xl transition-all flex items-center justify-center shrink-0"
-                                                                    title="Supprimer le salon"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </motion.div>
-                                                )
-                                            })}
-                                        </AnimatePresence>
-                                    </div>
-                                )}
-                            </section>
-                        )}
+                                    playsInline
+                                    preload="metadata"
+                                >
+                                    <source src="/teaser.mp4" type="video/mp4" />
+                                    Votre navigateur ne supporte pas la balise vidéo.
+                                </video>
+                                
+                                {/* Inner glow / border effect */}
+                                <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-[2rem] pointer-events-none" />
+                            </div>
+                        </motion.div>
+                    </div>
+                </motion.section>
 
-                        {/* Invitations en Attente (Pending Requests) */}
-                        {user && myPendingRequests.length > 0 && (
-                            <section className="mt-8 mx-4 sm:mx-0 w-full max-w-2xl bg-black/40 backdrop-blur-xl rounded-[2rem] border border-white/5 p-4 sm:p-6 shadow-2xl overflow-hidden relative">
-                                <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 to-transparent pointer-events-none" />
-                                <h3 className="text-white font-black text-lg sm:text-xl flex items-center gap-2 uppercase tracking-widest mb-4 sm:mb-6 border-b border-white/10 pb-4 relative z-10 flex-wrap">
-                                    <Clock className="w-5 h-5 text-purple-400 animate-pulse" /> Requêtes d'entrée
-                                    <span className="ml-auto mt-2 sm:mt-0 text-[10px] sm:text-xs font-medium bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full border border-purple-500/30">
-                                        {myPendingRequests.length} en attente
-                                    </span>
-                                </h3>
-
-                                <div className="space-y-3 relative z-10">
-                                    <AnimatePresence>
-                                        {myPendingRequests.map(req => (
-                                            <motion.div
-                                                key={req.id}
-                                                initial={{ opacity: 0, scale: 0.95 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                exit={{ opacity: 0, scale: 0.95 }}
-                                                className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-                                            >
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <h4 className="text-white font-bold text-lg">{req.rooms?.name || 'Partie Sans Nom'}</h4>
-                                                    </div>
-                                                    <div className="flex items-center gap-3 mt-1.5 text-xs font-medium uppercase tracking-wider text-white/50">
-                                                        <span className="flex items-center gap-1">
-                                                            <Hash className="w-3.5 h-3.5" /> {req.rooms?.code}
-                                                        </span>
-                                                        <span className="flex items-center gap-1 text-yellow-400/80">
-                                                            En attente de l'hôte...
-                                                        </span>
-                                                    </div>
+                {/* ── My Rooms Section (Host) ── */}
+                {user && myRooms.length > 0 && (
+                    <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-12">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 className="font-display text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
+                                    <Crown className="w-5 h-5 text-tertiary" /> MES SALONS
+                                </h2>
+                                <p className="text-on-surface-variant text-sm">{myRooms.length} serveur(s) actif(s)</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                            <AnimatePresence>
+                                {myRooms.map(room => {
+                                    const playerCount = room.players[0]?.count || 0
+                                    return (
+                                        <motion.div
+                                            key={room.id}
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.95 }}
+                                            className="glass-panel p-5 sm:p-6 rounded-2xl border border-outline-variant/10 hover:border-tertiary/30 transition-all group cursor-pointer relative overflow-hidden"
+                                            onClick={() => router.push(`/room/${room.id}`)}
+                                        >
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-tertiary/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-tertiary/10 transition-all" />
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="bg-surface-container p-3 rounded-xl">
+                                                    <Crown className="w-5 h-5 text-tertiary" />
                                                 </div>
+                                                <span className={`text-xs font-bold px-3 py-1 rounded-full ${room.status === 'lobby' ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-secondary/10 text-secondary border border-secondary/20'}`}>
+                                                    {room.status === 'lobby' ? 'EN ATTENTE' : 'EN COURS'}
+                                                </span>
+                                            </div>
+                                            <h3 className="font-display text-lg sm:text-xl font-bold mb-1 truncate">{room.name || 'Partie Sans Nom'}</h3>
+                                            <p className="text-on-surface-variant text-xs mb-4 flex items-center gap-2">
+                                                <Hash className="w-3.5 h-3.5" /> {room.code}
+                                                {!room.is_public && <Lock className="w-3 h-3 ml-1" />}
+                                            </p>
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-display font-bold text-tertiary">{playerCount}/{room.max_players}</span>
                                                 <div className="flex gap-2">
-                                                    <div className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                                    <div className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                                    <div className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                                    {room.status === 'lobby' && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); deleteRoom(room.id); }}
+                                                            className="p-2 bg-secondary/10 text-secondary hover:bg-secondary hover:text-on-surface rounded-lg transition-all"
+                                                            title="Supprimer"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
                                                 </div>
-                                            </motion.div>
-                                        ))}
-                                    </AnimatePresence>
-                                </div>
-                            </section>
-                        )}
+                                            </div>
+                                        </motion.div>
+                                    )
+                                })}
+                            </AnimatePresence>
+                        </div>
+                    </motion.section>
+                )}
 
-                        {/* Public Lobbies Browser */}
-                        <section className="mt-8 w-full max-w-2xl bg-black/40 backdrop-blur-xl rounded-[2rem] border border-white/5 p-6 shadow-2xl">
-                            <h3 className="text-white font-black text-xl flex items-center gap-2 uppercase tracking-widest mb-6">
-                                <Globe className="w-5 h-5 text-purple-400" /> Salons Publics
-                                <span className="ml-auto text-xs font-medium bg-white/10 px-3 py-1 rounded-full text-white/60">
-                                    {publicRooms.length} serveur(s)
-                                </span>
-                            </h3>
+                {/* ── Public Rooms Grid ── */}
+                <section className="mb-12">
+                    <div className="flex items-center justify-between mb-6 sm:mb-8">
+                        <div>
+                            <h2 className="font-display text-xl sm:text-2xl font-bold tracking-tight">SALONS PUBLICS</h2>
+                            <p className="text-on-surface-variant text-sm">Investigations actives en cours...</p>
+                        </div>
+                    </div>
 
-                            {isFetchingRooms ? (
-                                <div className="flex justify-center p-8">
-                                    <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
-                                </div>
-                            ) : publicRooms.length === 0 ? (
-                                <div className="text-center py-8 bg-white/5 rounded-2xl border border-white/5 border-dashed">
-                                    <AlertCircle className="w-8 h-8 text-white/20 mx-auto mb-3" />
-                                    <p className="text-white/40 font-medium text-sm">Aucune partie publique en attente.</p>
-                                    <p className="text-white/30 text-xs italic mt-1 font-sans">Soyez le premier à en héberger une !</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                                    <AnimatePresence>
-                                        {publicRooms.map(room => {
-                                            const playerCount = room.players[0]?.count || 0
-                                            const isFull = playerCount >= room.max_players
+                    {isFetchingRooms ? (
+                        <div className="flex justify-center p-12">
+                            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                        </div>
+                    ) : publicRooms.length === 0 ? (
+                        <div className="glass-panel rounded-2xl p-10 sm:p-12 text-center border border-outline-variant/10">
+                            <AlertCircle className="w-10 h-10 text-on-surface-variant/20 mx-auto mb-4" />
+                            <p className="text-on-surface-variant/50 font-medium text-sm mb-1">Aucune partie publique en attente.</p>
+                            <p className="text-on-surface-variant/30 text-xs italic">Soyez le premier à en héberger une !</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                            <AnimatePresence>
+                                {publicRooms.map(room => {
+                                    const playerCount = room.players[0]?.count || 0
+                                    const isFull = playerCount >= room.max_players
+                                    const initials = (room.name || 'XX').substring(0, 2).toUpperCase()
 
-                                            return (
-                                                <motion.div
-                                                    key={room.id}
-                                                    initial={{ opacity: 0, scale: 0.95 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
-                                                    exit={{ opacity: 0, scale: 0.95 }}
-                                                    className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-white/10 transition-colors"
-                                                >
-                                                    <div>
-                                                        <h4 className="text-white font-bold text-lg">{room.name || 'Partie Sans Nom'}</h4>
-                                                        <div className="flex items-center gap-3 mt-1.5 text-xs font-medium uppercase tracking-wider text-white/50">
-                                                            <span className="flex items-center gap-1">
-                                                                <Hash className="w-3.5 h-3.5" /> {room.code}
-                                                            </span>
-                                                            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${isFull ? 'bg-red-500/20 text-red-300' : 'bg-green-500/20 text-green-300'}`}>
-                                                                <Users className="w-3.5 h-3.5" /> {playerCount} / {room.max_players} Joueurs
-                                                            </span>
+                                    return (
+                                        <motion.div
+                                            key={room.id}
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.95 }}
+                                            className="glass-panel p-5 sm:p-6 rounded-2xl border border-outline-variant/10 hover:border-primary/30 transition-all group cursor-pointer relative overflow-hidden"
+                                        >
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/10 transition-all" />
+                                            <div className="flex justify-between items-start mb-4 sm:mb-6">
+                                                <div className="bg-surface-container p-3 rounded-xl">
+                                                    <Users className="w-5 h-5 text-primary" />
+                                                </div>
+                                                <span className={`text-xs font-bold px-3 py-1 rounded-full ${isFull ? 'bg-error/10 text-error border border-error/20' : 'bg-secondary/10 text-secondary border border-secondary/20'}`}>
+                                                    {isFull ? 'COMPLET' : 'LIVE'}
+                                                </span>
+                                            </div>
+                                            <h3 className="font-display text-lg sm:text-xl font-bold mb-2 truncate">{room.name || 'Partie Sans Nom'}</h3>
+                                            <p className="text-on-surface-variant text-xs sm:text-sm mb-4 sm:mb-6 flex items-center gap-1">
+                                                <Hash className="w-3 h-3" /> {room.code}
+                                            </p>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex -space-x-2">
+                                                    {[...Array(Math.min(playerCount, 3))].map((_, i) => (
+                                                        <div key={i} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 border-surface bg-surface-container flex items-center justify-center text-[10px] font-bold text-on-surface-variant">
+                                                            {String.fromCharCode(65 + i)}
                                                         </div>
-                                                    </div>
+                                                    ))}
+                                                    {playerCount > 3 && (
+                                                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 border-surface bg-primary-container text-primary flex items-center justify-center text-[10px] font-bold">
+                                                            +{playerCount - 3}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="font-display font-bold text-primary">{playerCount}/{room.max_players}</span>
                                                     <button
                                                         onClick={() => joinPublicRoom(room.id)}
                                                         disabled={isFull || joinLoadingId === room.id}
-                                                        className="w-full sm:w-auto bg-purple-600/80 hover:bg-purple-500 border border-purple-500 text-white font-bold py-2 px-6 rounded-xl transition-all disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-2 uppercase text-xs tracking-widest shrink-0 shadow-lg"
+                                                        className="bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold px-3 py-2 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                                                     >
-                                                        {joinLoadingId === room.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Rejoindre'}
+                                                        {joinLoadingId === room.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'REJOINDRE'}
                                                     </button>
-                                                </motion.div>
-                                            )
-                                        })}
-                                    </AnimatePresence>
-                                </div>
-                            )}
-                        </section>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )
+                                })}
+                            </AnimatePresence>
+                        </div>
+                    )}
+                </section>
 
-                        <footer className="mt-12 text-center pb-8">
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 1.2 }}
-                                className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 mb-6"
-                            >
-                                <Link href="/game-rules" className="text-white/40 hover:text-white/80 transition-colors text-xs tracking-widest uppercase font-bold flex items-center gap-2">
-                                    <BookOpen className="w-4 h-4" /> Règles du jeu
-                                </Link>
-                                <span className="hidden sm:inline-block text-white/20">•</span>
-                                <Link href="/privacy-policy" className="text-white/40 hover:text-white/80 transition-colors text-xs tracking-widest uppercase font-bold flex items-center gap-2">
-                                    <Shield className="w-4 h-4" /> Confidentialité (RGPD)
-                                </Link>
-                            </motion.div>
+                {/* ══════════════════════════════════════════════ */}
+                {/* BOTTOM AD BANNER PLACEHOLDER                   */}
+                {/* ══════════════════════════════════════════════ */}
+                <section className="mb-12 w-full">
+                    <div className="w-full h-32 sm:h-40 border-2 border-dashed border-outline-variant/20 rounded-3xl flex flex-col justify-center items-center gap-2 text-on-surface-variant/40 bg-surface-container-lowest/30 overflow-hidden relative group transition-all hover:border-primary/30 hover:bg-surface-container-lowest/50">
+                        <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <Sparkles className="w-6 h-6 opacity-60 text-primary mb-1" />
+                        <div className="text-center font-display tracking-widest text-xs uppercase font-bold relative z-10 px-4">
+                            <span className="text-on-surface-variant font-black tracking-[0.2em] opacity-80">Espace Publicitaire</span>
+                            <span className="text-[9px] opacity-50 font-sans tracking-tight font-normal mt-1 block">Emplacement bannière (728x90)</span>
+                        </div>
+                    </div>
+                </section>
 
-                            <motion.p
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 0.5 }}
-                                transition={{ delay: 1.5 }}
-                                className="text-white/30 text-xs tracking-widest uppercase font-medium hover:opacity-100 transition-opacity cursor-default"
-                            >
-                                By abderrazak Morro
-                            </motion.p>
-                        </footer>
-                    </motion.div>
-                </div>
+                {/* Footer */}
+                <footer className="text-center pb-8 border-t border-outline-variant/5 pt-8 mt-8">
+                    <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-6">
+                        <Link href="/game-rules" className="text-on-surface-variant/50 hover:text-primary transition-colors text-xs tracking-widest uppercase font-bold flex items-center gap-2">
+                            <BookOpen className="w-4 h-4" /> Règles du jeu
+                        </Link>
+                        <span className="hidden sm:inline-block text-on-surface-variant/20">•</span>
+                        <Link href="/privacy-policy" className="text-on-surface-variant/50 hover:text-primary transition-colors text-xs tracking-widest uppercase font-bold flex items-center gap-2">
+                            <Shield className="w-4 h-4" /> Confidentialité
+                        </Link>
+                        <span className="hidden sm:inline-block text-on-surface-variant/20">•</span>
+                        <Link href="/contact" className="text-on-surface-variant/50 hover:text-primary transition-colors text-xs tracking-widest uppercase font-bold flex items-center gap-2">
+                            <Mail className="w-4 h-4" /> Contact
+                        </Link>
+                    </div>
+                    <p className="text-on-surface-variant/30 text-xs tracking-widest uppercase font-medium">By Abderrazak Morro</p>
+                </footer>
             </main>
+
+            {/* ══════════════════════════════════════════════ */}
+            {/* FLOATING SIDEBAR: Pending Requests (Desktop)   */}
+            {/* ══════════════════════════════════════════════ */}
+            {user && myPendingRequests.length > 0 && (
+                <aside className="hidden lg:block fixed right-6 top-24 bottom-24 w-72 z-30">
+                    <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="h-full glass-panel rounded-3xl border border-outline-variant/10 flex flex-col p-6 shadow-2xl"
+                    >
+                        <h2 className="font-display text-lg font-bold mb-6 flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-primary animate-pulse" />
+                            REQUÊTES
+                        </h2>
+                        <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
+                            <AnimatePresence>
+                                {myPendingRequests.map(req => (
+                                    <motion.div
+                                        key={req.id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/5"
+                                    >
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-xs font-bold text-on-surface-variant shrink-0">
+                                                {req.rooms?.name?.[0]?.toUpperCase() || '?'}
+                                            </div>
+                                            <div className="overflow-hidden">
+                                                <p className="text-sm font-bold truncate">{req.rooms?.name || 'Partie'}</p>
+                                                <p className="text-[10px] text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
+                                                    <Hash className="w-3 h-3" /> {req.rooms?.code}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-tertiary/80">
+                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                            <span>En attente de l'hôte...</span>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
+                        <div className="mt-6 pt-6 border-t border-outline-variant/10">
+                            <div className="bg-surface-container-lowest rounded-xl p-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                                    <span className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">Status Serveur</span>
+                                </div>
+                                <span className="text-[10px] font-bold text-primary">OPTIMAL</span>
+                            </div>
+                        </div>
+                    </motion.div>
+                </aside>
+            )}
+
+            {/* ══════════════════════════════════════════════ */}
+            {/* MOBILE BOTTOM NAV                              */}
+            {/* ══════════════════════════════════════════════ */}
+            <nav className="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-end pb-4 px-4 bg-gradient-to-t from-surface-container-lowest to-transparent">
+                <button
+                    onClick={() => { if (!user) openAuthModal(); else setShowCreateModal(true); }}
+                    className="flex flex-col items-center justify-center bg-surface-variant/50 backdrop-blur-md text-primary rounded-xl p-2.5 shadow-[0_0_15px_rgba(109,40,217,0.3)] transition-all"
+                >
+                    <Sparkles className="w-5 h-5" />
+                    <span className="text-[10px] font-bold mt-1">Héberger</span>
+                </button>
+                <button
+                    onClick={() => setShowJoinCodeModal(true)}
+                    className="flex flex-col items-center justify-center text-on-surface/30 p-2.5 hover:text-primary transition-all"
+                >
+                    <Hash className="w-5 h-5" />
+                    <span className="text-[10px] font-bold mt-1">Rejoindre</span>
+                </button>
+                <Link href="/game-rules" className="flex flex-col items-center justify-center text-on-surface/30 p-2.5 hover:text-primary transition-all">
+                    <BookOpen className="w-5 h-5" />
+                    <span className="text-[10px] font-bold mt-1">Règles</span>
+                </Link>
+            </nav>
+
+            {/* ══════════════════════════════════════════════ */}
+            {/* MODALS                                         */}
+            {/* ══════════════════════════════════════════════ */}
 
             {/* Profile Modal */}
             <AnimatePresence>
                 {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+            </AnimatePresence>
 
-                {/* Create Room Modal */}
-                {showCreateModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm font-sans">
+            {/* Join Code Modal */}
+            <AnimatePresence>
+                {showJoinCodeModal && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-surface/90 backdrop-blur-sm font-sans">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-[2rem] shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]"
+                            className="w-full max-w-md glass-panel border border-outline-variant/15 rounded-3xl shadow-2xl overflow-hidden relative"
                         >
-                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-600 to-red-600" />
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-primary-container" />
+                            <div className="p-6">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-lg font-black text-on-surface uppercase tracking-wider flex items-center gap-2 font-display">
+                                        <Hash className="w-5 h-5 text-primary" /> Code d'invitation
+                                    </h2>
+                                    <button onClick={() => setShowJoinCodeModal(false)} className="text-on-surface-variant/70 hover:text-on-surface transition-colors bg-surface-container/60 p-2 rounded-full">
+                                        <DoorOpen className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <form onSubmit={joinRoom} className="space-y-4">
+                                    <input
+                                        type="text" placeholder="Code de la salle" value={joinCode}
+                                        onChange={(e) => setJoinCode(e.target.value)}
+                                        className="w-full bg-surface-container-lowest/40 border border-outline-variant/20 rounded-xl px-6 py-4 text-center text-on-surface text-xl font-bold tracking-[0.2em] uppercase focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-on-surface-variant/20 placeholder:normal-case placeholder:tracking-normal placeholder:font-normal placeholder:text-base"
+                                        maxLength={6}
+                                    />
+                                    <motion.button
+                                        whileHover={{ scale: joinCode.length >= 3 ? 1.02 : 1 }}
+                                        whileTap={{ scale: joinCode.length >= 3 ? 0.98 : 1 }}
+                                        type="submit" disabled={joinCode.length < 3}
+                                        className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold py-4 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-widest text-sm shadow-[0_10px_30px_rgba(109,40,217,0.3)]"
+                                    >
+                                        Rejoindre la salle
+                                    </motion.button>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
-                            <div className="p-4 sm:p-6 border-b border-white/5 flex items-center justify-between shrink-0">
-                                <h2 className="text-lg sm:text-xl font-black text-white uppercase tracking-wider flex items-center gap-2">
-                                    <Settings className="w-5 h-5 text-purple-400" /> Configuration
+            {/* Create Room Modal */}
+            <AnimatePresence>
+                {showCreateModal && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-surface/90 backdrop-blur-sm font-sans">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-md glass-panel border border-outline-variant/15 rounded-3xl shadow-2xl overflow-hidden relative flex flex-col max-h-[90vh]"
+                        >
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-container to-secondary-container" />
+                            <div className="p-4 sm:p-6 border-b border-outline-variant/10 flex items-center justify-between shrink-0">
+                                <h2 className="text-lg sm:text-xl font-black text-on-surface uppercase tracking-wider flex items-center gap-2 font-display">
+                                    <Settings className="w-5 h-5 text-primary" /> Configuration
                                 </h2>
-                                <button onClick={() => setShowCreateModal(false)} className="text-zinc-500 hover:text-white transition-colors bg-white/5 p-2 rounded-full cursor-pointer">
+                                <button onClick={() => setShowCreateModal(false)} className="text-on-surface-variant/70 hover:text-on-surface transition-colors bg-surface-container/60 p-2 rounded-full cursor-pointer">
                                     <DoorOpen className="w-4 h-4" />
                                 </button>
                             </div>
-
                             <div className="overflow-y-auto custom-scrollbar">
                                 <form onSubmit={createRoom} className="p-4 sm:p-6 space-y-6">
-                                    {/* Game Name */}
                                     <div className="space-y-2">
-                                        <label className="text-xs uppercase font-bold tracking-widest text-zinc-400">Nom du salon (Optionnel)</label>
-                                        <input
-                                            type="text"
-                                            placeholder={`Partie de ${user?.pseudo}`}
+                                        <label className="text-xs uppercase font-bold tracking-widest text-on-surface-variant">Nom du salon (Optionnel)</label>
+                                        <input type="text" placeholder={`Partie de ${user?.pseudo}`}
                                             value={createSettings.name}
                                             onChange={e => setCreateSettings({ ...createSettings, name: e.target.value })}
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-medium focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 transition-all placeholder:text-zinc-600"
+                                            className="w-full bg-surface-container-lowest/40 border border-outline-variant/15 rounded-xl px-4 py-3 text-on-surface font-medium focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-on-surface-variant/40"
                                         />
                                     </div>
-
-                                    {/* Visibility Toggle */}
                                     <div className="space-y-2">
-                                        <label className="text-xs uppercase font-bold tracking-widest text-zinc-400">Visibilité</label>
-                                        <div className="flex bg-black/40 rounded-xl p-1 border border-white/5">
-                                            <button
-                                                type="button"
+                                        <label className="text-xs uppercase font-bold tracking-widest text-on-surface-variant">Visibilité</label>
+                                        <div className="flex bg-surface-container-lowest/40 rounded-xl p-1 border border-outline-variant/15">
+                                            <button type="button"
                                                 onClick={() => setCreateSettings({ ...createSettings, isPublic: true })}
-                                                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${createSettings.isPublic ? 'bg-purple-600 text-white shadow-md' : 'text-zinc-500 hover:text-white'}`}
+                                                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${createSettings.isPublic ? 'bg-primary-container text-on-surface shadow-md' : 'text-on-surface-variant/70 hover:text-on-surface'}`}
                                             >
                                                 <Globe className="w-4 h-4" /> Public
                                             </button>
-                                            <button
-                                                type="button"
+                                            <button type="button"
                                                 onClick={() => setCreateSettings({ ...createSettings, isPublic: false })}
-                                                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${!createSettings.isPublic ? 'bg-red-600 text-white shadow-md' : 'text-zinc-500 hover:text-white'}`}
+                                                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${!createSettings.isPublic ? 'bg-secondary-container text-on-surface shadow-md' : 'text-on-surface-variant/70 hover:text-on-surface'}`}
                                             >
                                                 <Lock className="w-4 h-4" /> Privé
                                             </button>
                                         </div>
-                                        <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-medium mt-1 pl-1">
-                                            {createSettings.isPublic ? "Visible par tous sur l'accueil. Les joueurs doivent demander à rejoindre." : "Caché. Joignable uniquement via un lien d'invitation direct."}
+                                        <p className="text-[10px] text-on-surface-variant/70 uppercase tracking-widest font-medium mt-1 pl-1">
+                                            {createSettings.isPublic ? "Visible par tous. Les joueurs doivent demander à rejoindre." : "Caché. Joignable uniquement via code."}
                                         </p>
                                     </div>
-
-                                    {/* Max Players */}
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-center">
-                                            <label className="text-xs uppercase font-bold tracking-widest text-zinc-400">Joueurs max</label>
-                                            <span className="text-purple-400 font-black text-lg">{createSettings.maxPlayers}</span>
+                                            <label className="text-xs uppercase font-bold tracking-widest text-on-surface-variant">Joueurs max</label>
+                                            <span className="text-primary font-black text-lg">{createSettings.maxPlayers}</span>
                                         </div>
-                                        <input
-                                            type="range"
-                                            min="4"
-                                            max="15"
+                                        <input type="range" min="4" max="15"
                                             value={createSettings.maxPlayers}
                                             onChange={e => setCreateSettings({ ...createSettings, maxPlayers: parseInt(e.target.value) })}
-                                            className="w-full accent-purple-500 h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                                            className="w-full accent-primary-container h-2 bg-surface-container-highest rounded-lg appearance-none cursor-pointer"
                                         />
-                                        <div className="flex justify-between text-[10px] text-zinc-500 font-bold px-1">
-                                            <span>4</span>
-                                            <span>15</span>
+                                        <div className="flex justify-between text-[10px] text-on-surface-variant/70 font-bold px-1">
+                                            <span>4</span><span>15</span>
                                         </div>
                                     </div>
-
-                                    <button
-                                        type="submit"
-                                        disabled={isCreating}
-                                        className="w-full bg-gradient-to-r from-purple-600 to-red-600 hover:from-purple-500 hover:to-red-500 text-white font-black uppercase tracking-widest py-4 rounded-xl shadow-[0_4px_20px_rgba(168,85,247,0.4)] transition-all flex items-center justify-center gap-2 mt-4"
+                                    <button type="submit" disabled={isCreating}
+                                        className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-black uppercase tracking-widest py-4 rounded-xl shadow-[0_10px_30px_rgba(109,40,217,0.4)] transition-all flex items-center justify-center gap-2 mt-4 hover:shadow-[0_15px_40px_rgba(109,40,217,0.5)]"
                                     >
                                         {isCreating ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Lancer le salon'}
                                     </button>
@@ -767,6 +869,48 @@ export default function Home() {
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* Mobile Video Teaser Modal */}
+            <AnimatePresence>
+                {showMobileTeaser && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-surface/95 backdrop-blur-xl font-sans md:hidden">
+                        <motion.div
+                            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+                            className="w-full h-full p-4 relative flex items-center justify-center"
+                        >
+                            <button 
+                                onClick={() => setShowMobileTeaser(false)} 
+                                className="absolute top-6 right-6 z-50 bg-surface-container/60 hover:bg-surface-container-highest text-on-surface-variant/70 hover:text-on-surface transition-all p-3 rounded-full backdrop-blur-md shadow-lg"
+                            >
+                                <DoorOpen className="w-6 h-6 text-primary" />
+                            </button>
+                            
+                            <div className="relative w-full max-w-sm rounded-[2.5rem] overflow-hidden glass-panel border border-outline-variant/20 shadow-[0_20px_50px_rgba(0,0,0,0.8)] aspect-[9/16] bg-surface-container-lowest">
+                                <video 
+                                    className="w-full h-full object-cover opacity-90 transition-opacity duration-500 saturate-[0.8]"
+                                    loop 
+                                    controls
+                                    muted={globalMuted} 
+                                    playsInline
+                                    preload="auto"
+                                >
+                                    <source src="/teaser.mp4" type="video/mp4" />
+                                </video>
+                                
+                                <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-[2.5rem] pointer-events-none" />
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Audio Settings Modal */}
+            <AudioSettingsModal 
+                isOpen={showAudioSettings} 
+                onClose={() => setShowAudioSettings(false)} 
+            />
         </>
     )
 }

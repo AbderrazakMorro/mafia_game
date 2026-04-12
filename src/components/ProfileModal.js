@@ -62,31 +62,31 @@ export default function ProfileModal({ onClose }) {
     ];
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-surface/90 backdrop-blur-sm">
             <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col"
+                className="w-full max-w-md glass-panel bg-surface-container/95 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col border border-outline-variant/10"
             >
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 via-amber-600 to-rose-900" />
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-primary-container" />
 
                 <div className="absolute top-4 right-4 flex items-center gap-4 z-10">
-                    <Link href="/game-rules" className="text-zinc-500 hover:text-purple-400 transition-colors" title="Règles du jeu">
+                    <Link href="/game-rules" className="text-on-surface-variant/70 hover:text-primary transition-colors" title="Règles du jeu">
                         <BookOpen className="w-5 h-5" />
                     </Link>
-                    <Link href="/privacy-policy" className="text-zinc-500 hover:text-emerald-400 transition-colors" title="Confidentialité">
+                    <Link href="/privacy-policy" className="text-on-surface-variant/70 hover:text-tertiary transition-colors" title="Confidentialité">
                         <Shield className="w-5 h-5" />
                     </Link>
-                    <div className="w-[1px] h-5 bg-zinc-800" />
-                    <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
-                        <X className="w-5 h-5" />
+                    <div className="w-[1px] h-5 bg-outline-variant/20" />
+                    <button onClick={onClose} className="text-on-surface-variant/70 hover:text-on-surface transition-colors bg-surface-container/60 p-1.5 rounded-full">
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
 
                 {/* Header with avatar */}
                 <div className="p-6 pb-4 flex flex-col items-center shrink-0">
-                    <div className="w-24 h-24 rounded-full overflow-hidden border-3 border-red-600/50 shadow-lg shadow-red-900/40 mb-3 bg-zinc-900">
+                    <div className="w-24 h-24 rounded-full overflow-hidden ring-2 ring-primary/40 shadow-[0_0_20px_rgba(109,40,217,0.3)] mb-3 bg-surface-container-low">
                         {(pendingAvatar || user.avatar_url) ? (
                             <img
                                 src={pendingAvatar || user.avatar_url}
@@ -95,26 +95,26 @@ export default function ProfileModal({ onClose }) {
                                 loading="lazy"
                             />
                         ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-red-600 to-rose-800 flex items-center justify-center">
-                                <Fingerprint className="w-10 h-10 text-white" />
+                            <div className="w-full h-full bg-gradient-to-br from-primary-container to-primary flex items-center justify-center">
+                                <Fingerprint className="w-10 h-10 text-on-primary" />
                             </div>
                         )}
                     </div>
-                    <h2 className="text-xl font-black text-white uppercase tracking-wider">{user.pseudo}</h2>
+                    <h2 className="text-xl font-black text-on-surface uppercase tracking-wider font-display">{user.pseudo}</h2>
                     {isGuest && (
-                        <span className="mt-1.5 text-xs bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full font-medium tracking-wide uppercase flex items-center gap-1.5">
+                        <span className="mt-1.5 text-xs bg-tertiary/20 text-tertiary px-3 py-1 rounded-full font-medium tracking-wide uppercase flex items-center gap-1.5">
                             <Shield className="w-3 h-3" /> Invité
                         </span>
                     )}
                     {user.email && (
-                        <p className="text-zinc-500 text-sm mt-1.5 flex items-center gap-1.5">
+                        <p className="text-on-surface-variant/70 text-sm mt-1.5 flex items-center gap-1.5">
                             <Mail className="w-3.5 h-3.5" /> {user.email}
                         </p>
                     )}
                 </div>
 
                 {/* Section Tabs */}
-                <div className="flex mx-6 bg-zinc-900 rounded-xl p-1 mb-4 shrink-0">
+                <div className="flex mx-6 bg-surface-container-low rounded-xl p-1 mb-4 shrink-0">
                     {sections.map(sec => {
                         const Icon = sec.icon;
                         const isActive = activeSection === sec.id;
@@ -122,14 +122,14 @@ export default function ProfileModal({ onClose }) {
                             <button
                                 key={sec.id}
                                 onClick={() => setActiveSection(sec.id)}
-                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg transition-all relative z-10 ${isActive ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg transition-all relative z-10 ${isActive ? 'text-on-surface' : 'text-on-surface-variant/70 hover:text-on-surface'}`}
                             >
                                 <Icon className="w-3.5 h-3.5" />
                                 {sec.label}
                                 {isActive && (
                                     <motion.div
                                         layoutId="profileTab"
-                                        className="absolute inset-0 bg-zinc-800 rounded-lg -z-10"
+                                        className="absolute inset-0 bg-surface-container-highest rounded-lg -z-10"
                                         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                                     />
                                 )}
@@ -144,31 +144,31 @@ export default function ProfileModal({ onClose }) {
                         {activeSection === 'identity' && (
                             <motion.div key="identity" initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} transition={{ duration: 0.15 }} className="space-y-4">
                                 <label className="block">
-                                    <span className="text-zinc-400 text-xs uppercase tracking-wider font-medium mb-2 block">Pseudo</span>
+                                    <span className="text-on-surface-variant text-xs uppercase tracking-wider font-medium mb-2 block">Pseudo</span>
                                     {isEditing ? (
                                         <div className="relative group">
-                                            <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 group-focus-within:text-red-400 transition-colors" />
+                                            <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/70 group-focus-within:text-primary transition-colors" />
                                             <input
                                                 type="text"
                                                 value={editData.pseudo}
                                                 onChange={e => setEditData({ ...editData, pseudo: e.target.value })}
-                                                className="w-full bg-zinc-900 border border-zinc-700 focus:border-red-500 rounded-xl py-3 pl-12 pr-4 text-white font-bold focus:outline-none focus:ring-1 focus:ring-red-500/50 transition-all"
+                                                className="w-full bg-surface-container-low/60 rounded-xl py-3 pl-12 pr-4 text-on-surface font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                                             />
                                         </div>
                                     ) : (
-                                        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl py-3 px-4 text-white font-bold flex items-center gap-3">
-                                            <Fingerprint className="w-5 h-5 text-red-400" />
+                                        <div className="bg-surface-container-low/50 rounded-xl py-3 px-4 text-on-surface font-bold flex items-center gap-3">
+                                            <Fingerprint className="w-5 h-5 text-primary" />
                                             {user.pseudo}
                                         </div>
                                     )}
                                 </label>
 
                                 {isEditing ? (
-                                    <button onClick={handleSave} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 uppercase tracking-wider text-sm">
+                                    <button onClick={handleSave} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-on-surface font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 uppercase tracking-wider text-sm">
                                         <Save className="w-4 h-4" /> Sauvegarder
                                     </button>
                                 ) : (
-                                    <button onClick={() => setIsEditing(true)} className="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 uppercase tracking-wider text-sm">
+                                    <button onClick={() => setIsEditing(true)} className="w-full bg-surface-container-low hover:bg-surface-container-highest text-on-surface font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 uppercase tracking-wider text-sm">
                                         <Settings className="w-4 h-4" /> Modifier
                                     </button>
                                 )}
@@ -177,7 +177,7 @@ export default function ProfileModal({ onClose }) {
 
                         {activeSection === 'avatar' && (
                             <motion.div key="avatar" initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} transition={{ duration: 0.15 }}>
-                                <p className="text-zinc-400 text-xs uppercase tracking-wider font-medium mb-3">Choisir votre apparence</p>
+                                <p className="text-on-surface-variant text-xs uppercase tracking-wider font-medium mb-3">Choisir votre apparence</p>
                                 <AvatarPicker
                                     currentAvatar={pendingAvatar}
                                     onSelect={(url) => {
@@ -190,19 +190,19 @@ export default function ProfileModal({ onClose }) {
 
                         {activeSection === 'stats' && !isGuest && (
                             <motion.div key="stats" initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} transition={{ duration: 0.15 }}>
-                                <p className="text-zinc-400 text-xs uppercase tracking-wider font-medium mb-3">Archives criminelles</p>
+                                <p className="text-on-surface-variant text-xs uppercase tracking-wider font-medium mb-3">Archives criminelles</p>
                                 <div className="grid grid-cols-3 gap-3 mb-4">
                                     <StatCard icon={BarChart3} label="Score" value={score} />
                                     <StatCard icon={Gamepad2} label="Jouées" value={stats.games_played} />
                                     <StatCard icon={Trophy} label="Gagnées" value={stats.games_won} />
                                 </div>
-                                <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-4 flex items-center gap-4">
-                                    <div className="bg-red-600/20 p-3 rounded-xl">
-                                        <Percent className="w-5 h-5 text-red-400" />
+                                <div className="bg-surface-container-low/80 rounded-xl p-4 flex items-center gap-4">
+                                    <div className="bg-primary-container/30 p-3 rounded-xl">
+                                        <Percent className="w-5 h-5 text-primary" />
                                     </div>
                                     <div>
-                                        <p className="text-white font-black text-2xl">{winRate}%</p>
-                                        <p className="text-zinc-500 text-xs uppercase tracking-wide">Taux de victoire</p>
+                                        <p className="text-on-surface font-black text-2xl">{winRate}%</p>
+                                        <p className="text-on-surface-variant/70 text-xs uppercase tracking-wide">Taux de victoire</p>
                                     </div>
                                 </div>
                             </motion.div>
@@ -214,7 +214,7 @@ export default function ProfileModal({ onClose }) {
                 <div className="px-6 pb-6 shrink-0 space-y-2">
                     <button
                         onClick={handleLogout}
-                        className="w-full bg-red-950/50 hover:bg-red-900/50 border border-red-900/30 text-red-300 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 uppercase tracking-wider text-sm"
+                        className="w-full bg-secondary-container/20 hover:bg-secondary-container/40 text-secondary font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 uppercase tracking-wider text-sm"
                     >
                         <LogOut className="w-4 h-4" /> Déconnexion
                     </button>
@@ -222,18 +222,18 @@ export default function ProfileModal({ onClose }) {
                     {!isGuest && (
                         <>
                             {showDeleteConfirm ? (
-                                <div className="bg-red-950/80 border border-red-800 rounded-xl p-4 space-y-3">
-                                    <div className="flex items-center gap-2 text-red-400">
+                                <div className="bg-secondary-container/30 rounded-xl p-4 space-y-3">
+                                    <div className="flex items-center gap-2 text-secondary">
                                         <AlertTriangle className="w-5 h-5 shrink-0" />
                                         <p className="text-sm font-bold">Supprimer votre compte définitivement ?</p>
                                     </div>
-                                    <p className="text-red-300/70 text-xs">Cette action est irréversible. Toutes vos données seront supprimées.</p>
-                                    {deleteError && <p className="text-red-400 text-xs">{deleteError}</p>}
+                                    <p className="text-on-surface-variant/70 text-xs">Cette action est irréversible. Toutes vos données seront supprimées.</p>
+                                    {deleteError && <p className="text-secondary text-xs">{deleteError}</p>}
                                     <div className="flex gap-2">
                                         <button
                                             onClick={handleDeleteAccount}
                                             disabled={isDeleting}
-                                            className="flex-1 bg-red-700 hover:bg-red-600 text-white font-bold py-2 rounded-lg text-xs uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                            className="flex-1 bg-secondary hover:bg-secondary/80 text-on-secondary font-bold py-2 rounded-lg text-xs uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                                         >
                                             {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                                             {isDeleting ? 'Suppression...' : 'Confirmer'}
@@ -241,7 +241,7 @@ export default function ProfileModal({ onClose }) {
                                         <button
                                             onClick={() => { setShowDeleteConfirm(false); setDeleteError(null); }}
                                             disabled={isDeleting}
-                                            className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-2 rounded-lg text-xs uppercase tracking-wider transition-all disabled:opacity-50"
+                                            className="flex-1 bg-surface-container-highest hover:bg-surface-bright text-on-surface font-bold py-2 rounded-lg text-xs uppercase tracking-wider transition-all disabled:opacity-50"
                                         >
                                             Annuler
                                         </button>
@@ -250,7 +250,7 @@ export default function ProfileModal({ onClose }) {
                             ) : (
                                 <button
                                     onClick={() => setShowDeleteConfirm(true)}
-                                    className="w-full bg-zinc-900/50 hover:bg-red-950/50 border border-zinc-800 hover:border-red-900/50 text-zinc-500 hover:text-red-400 font-medium py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                                    className="w-full bg-surface-container-low/50 hover:bg-secondary-container/20 text-on-surface-variant/70 hover:text-secondary font-medium py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
                                 >
                                     <Trash2 className="w-3.5 h-3.5" /> Supprimer mon compte
                                 </button>
@@ -265,10 +265,10 @@ export default function ProfileModal({ onClose }) {
 
 function StatCard({ icon: Icon, label, value }) {
     return (
-        <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-3 text-center">
-            <Icon className="w-4 h-4 text-red-400 mx-auto mb-1" />
-            <p className="text-white font-black text-lg">{value}</p>
-            <p className="text-zinc-500 text-xs uppercase tracking-wide">{label}</p>
+        <div className="bg-surface-container-low/80 rounded-xl p-3 text-center">
+            <Icon className="w-4 h-4 text-primary mx-auto mb-1" />
+            <p className="text-on-surface font-black text-lg">{value}</p>
+            <p className="text-on-surface-variant/70 text-xs uppercase tracking-wide">{label}</p>
         </div>
     );
 }
