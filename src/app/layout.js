@@ -2,6 +2,7 @@ import { Space_Grotesk, Inter } from 'next/font/google'
 import './globals.css'
 import AuthProvider from '../components/AuthProvider'
 import GlobalAudioProvider from '../components/GlobalAudioProvider'
+import { Analytics } from '@vercel/analytics/next'
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space' })
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
@@ -69,6 +70,7 @@ export default function RootLayout({ children }) {
                         {children}
                     </AuthProvider>
                 </GlobalAudioProvider>
+                <Analytics />
                 <script
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
