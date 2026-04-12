@@ -1,0 +1,67 @@
+=========================================================
+  DESCRIPTION DÉTAILLÉE DU JEU "MAFIA ONLINE"
+=========================================================
+
+1. CONCEPT GLOBAL
+---------------------------------------------------------
+Mafia Online est un jeu vidéo multijoueur de déduction sociale se jouant dans le navigateur (ou en tant qu'application PWA installable). 
+Inspiré du célèbre jeu de société "Les Loups-Garous de Thiercelieux" ou "Mafia", le jeu oppose une minorité informée (la Mafia) à une majorité désinformée (les Villageois).
+Le projet est développé comme une architecture web moderne :
+- Front-end : Next.js (App Router), React, Tailwind CSS (Design System immersif), Framer Motion (Animations fluides).
+- Back-end / Base de données : Supabase (PostgreSQL) avec WebSockets pour le temps réel (Realtime) et Row Level Security (RLS) pour la sécurité.
+
+2. SYSTÈME D'AUTHENTIFICATION ET COMPTES
+---------------------------------------------------------
+Le jeu permet plusieurs modes d'accès pour un maximum de fluidité :
+- Profils Visiteurs (Guests) : Possibilité de jouer rapidement avec un pseudo temporaire stocké localement.
+- Profils Enregistrés : Les joueurs peuvent créer un compte, se connecter via un système d'authentification par e-mail et mot de passe, et conserver leur historique/avatar.
+- Gestion de Profil : Les utilisateurs peuvent consulter leur profil, mettre à jour leur pseudo/avatar ou supprimer leur compte.
+
+3. ARCHITECTURE DE L'INTERFACE UTILISATEUR (UI/UX)
+---------------------------------------------------------
+A. Page d'Accueil (Lobby Central / Home)
+   - Header : Actions de connexion, gestion de profil ou déconnexion.
+   - Section Hero : Design très immersif (verre dépoli, dégradés animés) invitant le joueur dans l'univers mystérieux de la ville.
+   - Actions Rapides :
+     - Héberger une Partie (Créer un salon personnalisable).
+     - Rejoindre via un Code PIN (pour les salons privés).
+     - Bouton d'installation de la PWA (si disponible).
+   - Mes Salles (Créateurs) : Affiche la liste des salles hébergées par l'utilisateur avec la possibilité de les rejoindre ou de les supprimer.
+   - Requêtes d'Entrée : Affiche les notifications pour l'hôte de demandes d'intronisation au salon privé en cours.
+   - Salons Publics : Un "Server Browser" en temps réel affichant les parties publiques actuellement en phase d'attente (nom, code, nombre de joueurs actuels/max).
+
+B. La Salle d'Attente de Jeu (Game Room - Phase "Lobby")
+   - Accès : Les hôtes y accèdent directement. Les invités ayant un code peuvent devoir demander une autorisation d'entrer à l'hôte (Join Requests).
+   - Interface : 
+     - Liste des participants mise à jour en temps réel.
+     - Affichage d'un Code pour les autres invités, et configuration du nombre de joueurs.
+   - Démarrage : L'hôte possède les contrôles exclusifs pour démarrer la partie lorsque le minimum de joueurs est atteint.
+
+C. Le Coeur du Jeu (Phases de Partie)
+   Le cycle de jeu alterne entre différentes phases :
+   
+   - Phase de Rôles ("roles") : Affichage de l'attribution des rôles avec animations. Le joueur découvre son rôle (Mafia, Villageois, Médecin, Détective, etc.).
+   
+   - Phase de Jour ("day") : 
+     - Discussion Publique : Un espace de Chat (ChatBox) permet à tous les joueurs vivants de débattre, mentir et partager leurs théories.
+     - Mode Vote : Les joueurs votent pour éliminer le joueur le plus suspect (Tribunal). Le joueur ayant la majorité est "pendu" et son rôle peut être révélé (selon le mod).
+     
+   - Phase de Nuit ("night") :
+     - Chat de Faction : Les membres de la Mafia disposent d'un Chat exclusif et secret pour coordonner leurs éliminations.
+     - Actions de Rôles : Les mafieux votent pour leur victime. Les rôles spéciaux (comme le médecin ou le policier) exécutent leurs propres actions d'interface (Protéger, Enquêter).
+
+   - Phase de Fin de Partie (Victory/End) :
+     - Écran de victoire récapitulatif montrant la faction gagnante.
+     - Bouton "Rejouer" (Ready for replay) pour ramener tout le monde vivants dans le lobby et recommencer.
+
+4. SÉCURITÉ ET "ANTI-CHEAT" (Base de données)
+---------------------------------------------------------
+Le backend s'assure qu'aucun client ne puisse tricher :
+- RLS & Vues de Base de Données : Les clients n'ont pas accès directement aux données sensibles. Par exemple, la table "players" cache la colonne "role" via une vue publique ("public_players") pour éviter que l'on puisse inspecter les rôles réseau des autres.
+- Les actions de mutations du jeu (Voter, Tuer, Démarrer, Rejoindre) s'effectuent via des API backend Next.js exclusives qui vérifient l'intégrité de la demande côté serveur.
+
+5. DESIGN ET ATMOSPHÈRE
+---------------------------------------------------------
+- L'esthétique Dark Mode est omniprésente, arborant des couleurs violet et cramoisi associant nuit et mystère.
+- Le jeu intègre une architecture audio globale (Global Audio Provider) pour lancer des effets et de la musique d'ambiance selon le cycle de jeu.
+- Le responsive design garantit que le jeu tourne aussi bien sur Desktop que sur Smartphone.

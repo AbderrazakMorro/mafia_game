@@ -49,10 +49,10 @@ export default function CookieConsentBanner({ onConsentChange }) {
                             <div className="text-3xl shrink-0 mt-1">🍪</div>
                             <div className="flex-1">
                                 <h3 className="text-on-surface font-bold text-lg mb-1 tracking-wide font-display">
-                                    Sauvegarde de session
+                                    Session Storage
                                 </h3>
                                 <p className="text-on-surface-variant text-sm leading-relaxed mb-4 font-medium">
-                                    Nous utilisons un cookie pour mémoriser votre identité afin que vous puissiez rafraîchir la page sans perdre votre place dans la salle.
+                                    We use a cookie to remember your identity so you can refresh the page without losing your place in the room.
                                 </p>
 
                                 <div className="flex gap-3 mt-4">
@@ -62,7 +62,7 @@ export default function CookieConsentBanner({ onConsentChange }) {
                                         onClick={handleAllow}
                                         className="flex-1 bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-[0_10px_20px_rgba(109,40,217,0.3)] uppercase tracking-wider"
                                     >
-                                        Accepter
+                                        Accept
                                     </motion.button>
                                     <motion.button
                                         whileHover={{ scale: 1.02 }}
@@ -70,7 +70,7 @@ export default function CookieConsentBanner({ onConsentChange }) {
                                         onClick={handleDecline}
                                         className="flex-1 bg-surface-container-high/60 hover:bg-surface-container-highest text-on-surface font-medium py-2.5 px-4 rounded-xl text-sm transition-all uppercase tracking-wider"
                                     >
-                                        Refuser
+                                        Decline
                                     </motion.button>
                                 </div>
                             </div>

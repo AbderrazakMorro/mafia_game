@@ -32,7 +32,7 @@ export default function AudioSettingsModal({ isOpen, onClose }) {
                         <div className="p-2 bg-primary/20 rounded-xl text-primary border border-primary/30">
                             <Settings className="w-6 h-6" />
                         </div>
-                        <h2 className="text-2xl font-bold text-on-surface tracking-wide">Paramètres Audio</h2>
+                        <h2 className="text-2xl font-bold text-on-surface tracking-wide">Audio Settings</h2>
                     </div>
                     <button 
                         onClick={() => { playSFX('click'); onClose(); }}
@@ -47,7 +47,7 @@ export default function AudioSettingsModal({ isOpen, onClose }) {
                     <div className="flex items-center justify-between p-4 rounded-2xl bg-surface-container-low border border-outline-variant/10">
                         <div className="flex items-center gap-3 text-on-surface">
                             {isMuted ? <VolumeX className="w-5 h-5 text-error" /> : <Volume2 className="w-5 h-5 text-primary" />}
-                            <span className="font-medium">Couper tout le son</span>
+                            <span className="font-medium">Mute all sound</span>
                         </div>
                         <button
                             onClick={() => { playSFX('click'); toggleMute(); }}
@@ -67,7 +67,7 @@ export default function AudioSettingsModal({ isOpen, onClose }) {
                         <div className="flex justify-between items-center text-on-surface-variant mb-1">
                             <div className="flex items-center gap-2">
                                 <Music className="w-4 h-4" />
-                                <span className="text-sm font-medium">Musique</span>
+                                <span className="text-sm font-medium">Music</span>
                             </div>
                             <span className="text-sm">{Math.round(musicVolume * 100)}%</span>
                         </div>
@@ -87,7 +87,7 @@ export default function AudioSettingsModal({ isOpen, onClose }) {
                         <div className="flex justify-between items-center text-on-surface-variant mb-1">
                             <div className="flex items-center gap-2">
                                 <Mic2 className="w-4 h-4" />
-                                <span className="text-sm font-medium">Effets Sonores</span>
+                                <span className="text-sm font-medium">Sound Effects</span>
                             </div>
                             <span className="text-sm">{Math.round(sfxVolume * 100)}%</span>
                         </div>
@@ -112,7 +112,7 @@ export default function AudioSettingsModal({ isOpen, onClose }) {
                         onClick={() => { playSFX('click'); onClose(); }}
                         className="w-full py-4 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-bold shadow-[0_0_15px_rgba(109,40,217,0.4)] transition-all"
                     >
-                        Terminé
+                        Done
                     </button>
                 </div>
             </motion.div>

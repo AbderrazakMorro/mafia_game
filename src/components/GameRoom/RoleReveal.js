@@ -6,9 +6,9 @@ import { Target, HeartPulse, Search, Users } from 'lucide-react'
 
 const ROLE_META = {
     mafia: { label: 'Mafia', color: 'text-secondary', bg: 'from-secondary-container', icon: <Target className="w-full h-full" />, border: 'border-secondary-container' },
-    doctor: { label: 'Docteur', color: 'text-emerald-400', bg: 'from-emerald-900', icon: <HeartPulse className="w-full h-full" />, border: 'border-emerald-900/50' },
-    detective: { label: 'Détective', color: 'text-blue-400', bg: 'from-blue-900', icon: <Search className="w-full h-full" />, border: 'border-blue-900/50' },
-    villager: { label: 'Villageois', color: 'text-on-surface', bg: 'from-surface-container-highest', icon: <Users className="w-full h-full" />, border: 'border-surface-container-high' },
+    doctor: { label: 'Doctor', color: 'text-emerald-400', bg: 'from-emerald-900', icon: <HeartPulse className="w-full h-full" />, border: 'border-emerald-900/50' },
+    detective: { label: 'Detective', color: 'text-blue-400', bg: 'from-blue-900', icon: <Search className="w-full h-full" />, border: 'border-blue-900/50' },
+    villager: { label: 'Villager', color: 'text-on-surface', bg: 'from-surface-container-highest', icon: <Users className="w-full h-full" />, border: 'border-surface-container-high' },
 }
 
 const RoleReveal = ({ role, mafiaTeam, onAcknowledge }) => {
@@ -22,7 +22,7 @@ const RoleReveal = ({ role, mafiaTeam, onAcknowledge }) => {
             </div>
 
             <motion.p initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-on-surface-variant uppercase tracking-[0.2em] sm:tracking-[0.4em] font-bold font-display text-xs sm:text-sm mb-8 sm:mb-12 relative z-10 text-center">
-                Votre Identité Secrète
+                Your Secret Identity
             </motion.p>
             <div className="relative w-64 h-[380px] sm:w-72 sm:h-[420px] max-w-[90vw] cursor-pointer select-none z-10 group" onClick={() => setFlipped(true)}>
                 <motion.div
@@ -41,7 +41,7 @@ const RoleReveal = ({ role, mafiaTeam, onAcknowledge }) => {
                         <div className="w-24 h-24 rounded-full bg-surface flex items-center justify-center text-5xl shadow-inner relative z-10 group-hover:scale-110 transition-transform duration-500 text-primary">
                             <Search className="w-12 h-12" />
                         </div>
-                        <p className="text-on-surface-variant text-sm font-medium tracking-widest uppercase relative z-10">Touchez pour révéler</p>
+                        <p className="text-on-surface-variant text-sm font-medium tracking-widest uppercase relative z-10">Tap to reveal</p>
                     </div>
 
                     {/* Front of Card */}
@@ -53,10 +53,10 @@ const RoleReveal = ({ role, mafiaTeam, onAcknowledge }) => {
                         <h3 className={`text-4xl font-black font-display uppercase tracking-tighter mb-4 relative z-10 ${r.color}`}>{r.label}</h3>
                         <div className="w-16 h-1 rounded-full bg-outline-variant/50 mb-6 relative z-10" />
                         <p className="text-on-surface font-medium text-sm leading-relaxed relative z-10 px-2">
-                            {role === 'mafia' && 'Éliminez les villageois la nuit. Mentez avec aplomb le jour.'}
-                            {role === 'doctor' && 'Sauvez une vie chaque nuit. Utilisez votre pouvoir avec sagesse.'}
-                            {role === 'detective' && 'Trouvez les coupables en enquêtant chaque nuit sur un suspect.'}
-                            {role === 'villager' && 'Soyez attentif. Démasquez la Mafia avant qu\'il ne soit trop tard.'}
+                            {role === 'mafia' && 'Eliminate villagers at night. Lie convincingly during the day.'}
+                            {role === 'doctor' && 'Save one life each night. Use your power wisely.'}
+                            {role === 'detective' && 'Find the guilty ones by investigating a suspect each night.'}
+                            {role === 'villager' && 'Stay alert. Unmask the Mafia before it\'s too late.'}
                         </p>
                     </div>
                 </motion.div>
@@ -68,7 +68,7 @@ const RoleReveal = ({ role, mafiaTeam, onAcknowledge }) => {
                     <motion.div initial={{ opacity: 0, y: 15, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: 0.6, type: 'spring' }}
                         className="mt-8 bg-surface-container-lowest/50 backdrop-blur-md shadow-lg rounded-2xl px-8 py-4 text-center z-10 relative"
                     >
-                        <p className="text-secondary font-bold font-display text-[10px] uppercase tracking-[0.3em] mb-2">L'Ombre vous accompagne</p>
+                        <p className="text-secondary font-bold font-display text-[10px] uppercase tracking-[0.3em] mb-2">Your Shadow Partners</p>
                         <p className="text-on-surface font-medium text-base">{mafiaTeam.join(', ')}</p>
                     </motion.div>
                 )}
@@ -84,7 +84,7 @@ const RoleReveal = ({ role, mafiaTeam, onAcknowledge }) => {
                         <span className="absolute inset-0 bg-gradient-to-r from-primary to-primary-container rounded-2xl blur-md opacity-20 group-hover:opacity-60 transition-opacity"></span>
                         <div className="relative bg-surface-container-highest hover:bg-surface-container-lowest backdrop-blur-xl px-12 py-4 rounded-2xl transition-all">
                             <span className="text-primary font-bold text-sm uppercase tracking-widest">
-                                J'ai compris mon rôle
+                                I understand my role
                             </span>
                         </div>
                     </motion.button>

@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
+import AudioHintToast from './AudioHintToast'
+import AudioSettingsModal from './AudioSettingsModal'
 
 const GlobalAudioContext = createContext({
     isMuted: false,
@@ -21,6 +23,7 @@ export default function GlobalAudioProvider({ children }) {
     const [musicVolume, setMusicVolume] = useState(0.25)
     const [sfxVolume, setSfxVolume] = useState(0.5)
     const [hasInteracted, setHasInteracted] = useState(false)
+    const [showAudioSettings, setShowAudioSettings] = useState(false)
     const pathname = usePathname()
 
     // ── Load from localStorage on mount ──
@@ -45,7 +48,7 @@ export default function GlobalAudioProvider({ children }) {
         }
     }, [isMuted, musicVolume, sfxVolume, hasInteracted])
 
-    const LOBBY_AUDIO_URL = 'https://cdn.pixabay.com/download/audio/2024/05/28/audio_suspense_lobby.mp3'
+    const LOBBY_AUDIO_URL = '/audio/bgm/waiting_room.wav'
 
     // 1. Initialize audio object
     useEffect(() => {
@@ -129,6 +132,15 @@ export default function GlobalAudioProvider({ children }) {
             playSFX 
         }}>
             {children}
+
+            {/* Global audio hint — shown once on first visit */}
+            <AudioHintToast onOpenSettings={() => setShowAudioSettings(true)} />
+
+            {/* Global audio settings modal */}
+            <AudioSettingsModal
+                isOpen={showAudioSettings}
+                onClose={() => setShowAudioSettings(false)}
+            />
         </GlobalAudioContext.Provider>
     )
 }

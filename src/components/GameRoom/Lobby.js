@@ -16,7 +16,7 @@ const QRCode = ({ url }) => {
             <div className="p-2 bg-surface-container rounded-xl shadow-lg">
                 <img src={src} alt="QR Code" width={180} height={180} className="rounded-lg block" loading="lazy" />
             </div>
-            <p className="text-on-surface-variant/70 text-xs italic">Scannez pour rejoindre</p>
+            <p className="text-on-surface-variant/70 text-xs italic">Scan to join</p>
         </div>
     )
 }
@@ -38,8 +38,8 @@ const InviteLinkActions = ({ url, code }) => {
     const handleShare = async () => {
         try {
             await navigator.share({
-                title: 'Mafia Game - Rejoins la partie !',
-                text: `Rejoins ma partie de Mafia ! Code: ${code}`,
+                title: 'Mafia Game - Join the game!',
+                text: `Join my Mafia game! Code: ${code}`,
                 url: url,
             })
         } catch (err) {
@@ -118,7 +118,7 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
         if (!nameToUse.trim()) return
 
         if (nameToUse.trim().length < 3 || nameToUse.trim().length > 20) {
-            setNicknameError('Le pseudo doit contenir entre 3 et 20 caractères.')
+            setNicknameError('Username must be between 3 and 20 characters.')
             return
         }
 
@@ -133,13 +133,13 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
 
             const nicknameTaken = players.some(p => p.username.toLowerCase() === nameToUse.trim().toLowerCase() && p.user_id !== userId)
             if (nicknameTaken) {
-                setNicknameError('Ce pseudo est déjà utilisé dans cette salle. Choisissez-en un autre.')
+                setNicknameError('This username is already taken in this room. Please choose another.')
                 setJoining(false)
                 return
             }
 
             if (players.length >= (roomData?.max_players || 8)) {
-                setNicknameError('La salle est pleine.')
+                setNicknameError('The room is full.')
                 setJoining(false)
                 return
             }
@@ -158,12 +158,12 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                     } catch { }
                 }
             } else {
-                alert("Vous devez passer par l'accueil pour rejoindre cette partie publique.")
+                alert("You must go through the home page to join this public game.")
                 window.location.href = '/'
             }
         } catch (err) {
             console.error("Error joining:", err)
-            setNicknameError('Une erreur est survenue. Veuillez réessayer.')
+            setNicknameError('An error occurred. Please try again.')
         }
         setJoining(false)
     }
@@ -177,7 +177,7 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                     </div>
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative z-10 flex flex-col items-center gap-6">
                         <div className="w-10 h-10 border-3 border-outline-variant/20 border-t-primary rounded-full animate-spin" />
-                        <p className="text-primary/70 font-medium text-sm tracking-widest uppercase">Connexion en cours...</p>
+                        <p className="text-primary/70 font-medium text-sm tracking-widest uppercase">Connecting...</p>
                     </motion.div>
                 </div>
             )
@@ -192,7 +192,7 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                     className="relative z-10 w-full max-w-sm bg-surface-container-highest/20 backdrop-blur-2xl rounded-3xl p-8 shadow-2xl"
                 >
                     <h1 className="text-6xl font-black font-display text-transparent bg-clip-text bg-gradient-to-br from-secondary to-primary uppercase tracking-tighter mb-1 drop-shadow-lg text-center">Mafia</h1>
-                    <p className="text-center text-primary/70 font-medium text-sm mb-8 tracking-[0.2em] uppercase">Entrez dans l'ombre...</p>
+                    <p className="text-center text-primary/70 font-medium text-sm mb-8 tracking-[0.2em] uppercase">Enter the shadows...</p>
                     <div className="space-y-4 relative z-10">
                         {nicknameError && (
                             <div className="bg-secondary-container/20 rounded-xl p-3 flex items-start gap-3">
@@ -210,7 +210,7 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                             onClick={() => handleJoin()} disabled={!username.trim() || joining}
                             className="w-full bg-gradient-to-br from-primary to-primary-container text-on-surface font-bold py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(211,187,255,0.3)] hover:shadow-[0_0_25px_rgba(211,187,255,0.5)] disabled:opacity-50 uppercase tracking-widest mt-4"
                         >
-                            {joining ? 'Entrée...' : 'Rejoindre la partie'}
+                            {joining ? 'Joining...' : 'Join the Game'}
                         </motion.button>
                     </div>
                 </motion.div>
@@ -223,9 +223,9 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
             <div className="flex flex-col items-center justify-center min-h-screen bg-surface text-center p-4">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-sm flex flex-col items-center">
                     <ShieldAlert className="w-20 h-20 text-on-surface-variant mb-6 drop-shadow-md" />
-                    <h2 className="text-2xl font-display font-bold text-secondary uppercase tracking-widest mb-3">Salle Verrouillée</h2>
-                    <p className="text-on-surface-variant italic">Cette partie a déjà commencé.</p>
-                    <a href="/" className="mt-8 inline-block px-8 py-3 rounded-xl bg-surface-container-highest text-on-surface hover:bg-surface-container-high transition-all text-sm uppercase tracking-wider">← Retour</a>
+                    <h2 className="text-2xl font-display font-bold text-secondary uppercase tracking-widest mb-3">Room Locked</h2>
+                    <p className="text-on-surface-variant italic">This game has already started.</p>
+                    <a href="/" className="mt-8 inline-block px-8 py-3 rounded-xl bg-surface-container-highest text-on-surface hover:bg-surface-container-high transition-all text-sm uppercase tracking-wider">← Back</a>
                 </motion.div>
             </div>
         )
@@ -243,7 +243,7 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                         {room?.name || 'Mafia'}
                     </h1>
                     <p className="text-on-surface-variant font-medium text-sm mt-2 tracking-[0.3em] uppercase">
-                        {room?.is_public ? 'Salon Public' : 'Salon Privé'} • {players.length} / {room?.max_players || 8} Joueurs
+                        {room?.is_public ? 'Public Room' : 'Private Room'} • {players.length} / {room?.max_players || 8} Players
                     </p>
                     {players.length >= 3 && (() => {
                         const m = getMafiaCount(players.length)
@@ -252,9 +252,9 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                         return (
                             <div className="flex justify-center gap-3 mt-6 flex-wrap text-sm font-bold">
                                 <span className="px-4 py-2 rounded-xl bg-surface-container-highest text-secondary shadow-[0_0_15px_rgba(255,180,172,0.1)] flex items-center gap-1.5"><Target className="w-4 h-4" /> {m} Mafia</span>
-                                <span className="px-4 py-2 rounded-xl bg-surface-container-highest text-emerald-400 flex items-center gap-1.5"><HeartPulse className="w-4 h-4" /> 1 Docteur</span>
-                                {hasDetective && <span className="px-4 py-2 rounded-xl bg-surface-container-highest text-blue-400 flex items-center gap-1.5"><Search className="w-4 h-4" /> 1 Détective</span>}
-                                {v > 0 && <span className="px-4 py-2 rounded-xl bg-surface-container-highest text-on-surface-variant flex items-center gap-1.5"><Users className="w-4 h-4" /> {v} Villageois</span>}
+                                <span className="px-4 py-2 rounded-xl bg-surface-container-highest text-emerald-400 flex items-center gap-1.5"><HeartPulse className="w-4 h-4" /> 1 Doctor</span>
+                                {hasDetective && <span className="px-4 py-2 rounded-xl bg-surface-container-highest text-blue-400 flex items-center gap-1.5"><Search className="w-4 h-4" /> 1 Detective</span>}
+                                {v > 0 && <span className="px-4 py-2 rounded-xl bg-surface-container-highest text-on-surface-variant flex items-center gap-1.5"><Users className="w-4 h-4" /> {v} Villager{v > 1 ? 's' : ''}</span>}
                             </div>
                         )
                     })()}
@@ -265,7 +265,7 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                     <div className="glass-panel rounded-3xl p-6 md:p-8 flex flex-col relative overflow-hidden shadow-2xl border border-outline-variant/10">
                         <h3 className="text-sm font-display text-primary/70 font-bold uppercase tracking-widest mb-6 flex items-center gap-3 relative z-10">
                             <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.8)]" />
-                            Joueurs présents ({players.length})
+                            Players present ({players.length})
                         </h3>
                         <ul className="flex-1 space-y-2 overflow-y-auto max-h-[50vh] md:max-h-72 pr-2 custom-scrollbar relative z-10 w-full">
                             <AnimatePresence>
@@ -282,11 +282,11 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                                             )}
                                         </div>
                                         <span className={`flex-1 font-bold text-base tracking-wide truncate ${p.user_id === currentUserId ? 'text-primary' : 'text-on-surface'}`}>{p.username}</span>
-                                        {p.user_id === currentUserId && <span className="text-[10px] uppercase font-bold tracking-widest text-primary bg-primary/10 rounded-full px-3 py-1">Vous</span>}
+                                        {p.user_id === currentUserId && <span className="text-[10px] uppercase font-bold tracking-widest text-primary bg-primary/10 rounded-full px-3 py-1">You</span>}
                                     </motion.li>
                                 ))}
                             </AnimatePresence>
-                            {players.length === 0 && <li className="text-on-surface-variant text-sm font-medium text-center py-8">La salle est vide...</li>}
+                            {players.length === 0 && <li className="text-on-surface-variant text-sm font-medium text-center py-8">The room is empty...</li>}
                         </ul>
                         
                         <div className="mt-8 relative z-10 w-full">
@@ -294,15 +294,15 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                                 players.length >= 3 ? (
                                     <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={onStart}
                                         className="w-full py-4 rounded-xl font-bold uppercase tracking-widest text-base bg-gradient-to-r from-primary to-primary-container text-on-surface shadow-[0_0_20px_rgba(211,187,255,0.4)] hover:shadow-[0_0_30px_rgba(211,187,255,0.6)] transition-all flex items-center justify-center gap-2"
-                                    ><Target className="w-5 h-5" /> Lancer la Partie</motion.button>
+                                    ><Target className="w-5 h-5" /> Start the Game</motion.button>
                                 ) : (
                                     <p className="text-secondary/80 text-xs font-bold uppercase tracking-widest text-center bg-secondary/10 py-3 rounded-xl">
-                                        {3 - players.length} joueur{3 - players.length > 1 ? 's' : ''} manquant{3 - players.length > 1 ? 's' : ''} (min. 3)
+                                        {3 - players.length} player{3 - players.length > 1 ? 's' : ''} missing (min. 3)
                                     </p>
                                 )
                             ) : (
                                 <div className="py-4 text-center rounded-xl bg-surface-container-highest shadow-inner">
-                                    <p className="text-on-surface-variant font-medium text-sm tracking-widest uppercase animate-pulse">L'hôte va lancer la partie...</p>
+                                    <p className="text-on-surface-variant font-medium text-sm tracking-widest uppercase animate-pulse">Waiting for the host to start...</p>
                                 </div>
                             )}
                         </div>
@@ -312,10 +312,10 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                         {/* Invite panel */}
                         <div className="glass-panel rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col items-center gap-6 relative overflow-hidden border border-outline-variant/10">
                             <h3 className="text-sm font-display text-primary/70 font-bold uppercase tracking-widest self-start relative z-10 w-full flex items-center gap-2">
-                                Inviter des amis
+                                Invite Friends
                             </h3>
                             <div className="w-full flex flex-col items-center gap-2 relative z-10">
-                                <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-[0.3em]">Code de la salle</p>
+                                <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-[0.3em]">Room Code</p>
                                 <span className="font-mono text-4xl md:text-5xl font-black tracking-[0.4em] text-transparent bg-clip-text bg-gradient-to-r from-secondary to-primary drop-shadow-md">{room?.code}</span>
                             </div>
                             <div className="w-full flex items-center justify-center relative z-10">
@@ -326,7 +326,7 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                                 </div>
                             </div>
                             <div className="w-full flex flex-col items-center gap-2 relative z-10 mt-2">
-                                <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-[0.3em]">Lien d'invitation</p>
+                                <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-[0.3em]">Invite Link</p>
                                 <InviteLinkActions url={inviteUrl} code={room?.code} />
                             </div>
                         </div>
@@ -336,7 +336,7 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                             <div className="glass-panel rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col relative overflow-hidden border border-outline-variant/10">
                                 <h3 className="text-sm font-display text-primary/70 font-bold uppercase tracking-widest mb-6 flex items-center gap-3 relative z-10 justify-between">
                                     <span className="flex items-center gap-2 text-tertiary">
-                                        <Clock className="w-5 h-5 animate-pulse" /> Requêtes d'entrée ({pendingRequests.length})
+                                        <Clock className="w-5 h-5 animate-pulse" /> Join Requests ({pendingRequests.length})
                                     </span>
                                 </h3>
 

@@ -123,13 +123,13 @@ const ChatBox = ({ roomId, players, currentPlayerId, phase }) => {
                             {visibleMessages.length === 0 ? (
                                 <p className="text-on-surface-variant/50 italic text-sm flex flex-col items-center justify-center gap-2 h-full font-medium">
                                     <Mic className="w-8 h-8 opacity-50" />
-                                    L'ambiance est calme... Parlez !
+                                    The room is quiet... Say something!
                                 </p>
                             ) : (
                                 visibleMessages.map(msg => {
                                     const isMe = msg.player_id === currentPlayerId
                                     const author = players.find(p => p.id === msg.player_id)
-                                    const authorName = author ? author.username : 'Inconnu'
+                                    const authorName = author ? author.username : 'Unknown'
                                     
                                     const CHAT_NAME_COLORS = [
                                         'text-primary', 'text-tertiary', 'text-secondary',
@@ -167,7 +167,7 @@ const ChatBox = ({ roomId, players, currentPlayerId, phase }) => {
                                     type="text"
                                     value={newMessage}
                                     onChange={e => setNewMessage(e.target.value)}
-                                    placeholder={activeTab === 'mafia' ? "Chuchoteur..." : "Dites quelque chose..."}
+                                    placeholder={activeTab === 'mafia' ? "Whisper..." : "Say something..."}
                                     maxLength={120}
                                     className="flex-1 bg-surface-container-lowest/60 rounded-xl px-4 py-3 text-sm font-medium text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                                 />
@@ -178,7 +178,7 @@ const ChatBox = ({ roomId, players, currentPlayerId, phase }) => {
                         ) : (
                             <div className="p-4 bg-surface-container-low border-t border-outline-variant/10 text-center shrink-0 relative z-10 flex items-center justify-center gap-2">
                                 <Skull className="w-4 h-4 text-secondary/80" />
-                                <p className="text-secondary/80 italic text-xs font-bold uppercase tracking-widest">Les morts ne parlent pas...</p>
+                                <p className="text-secondary/80 italic text-xs font-bold uppercase tracking-widest">The dead don't speak...</p>
                             </div>
                         )}
                     </motion.div>

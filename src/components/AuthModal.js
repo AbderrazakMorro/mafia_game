@@ -17,9 +17,9 @@ export default function AuthModal({ onAuthSuccess, onClose }) {
     const [guestData, setGuestData] = useState({ pseudo_temp: '' });
 
     const tabs = [
-        { id: 'sign_up', label: 'Inscription', icon: UserPlus },
-        { id: 'login', label: 'Connexion', icon: LogIn },
-        { id: 'guest', label: 'Invité', icon: Ghost },
+        { id: 'sign_up', label: 'Sign Up', icon: UserPlus },
+        { id: 'login', label: 'Login', icon: LogIn },
+        { id: 'guest', label: 'Guest', icon: Ghost },
     ];
 
     const handleSignup = async (e) => {
@@ -33,9 +33,9 @@ export default function AuthModal({ onAuthSuccess, onClose }) {
                 body: JSON.stringify(signupData),
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'inscription');
+            if (!res.ok) throw new Error(data.error || 'Registration error');
             localStorage.setItem('mafia_user', JSON.stringify(data.user));
-            onAuthSuccess(data.user, `Bienvenue, ${data.user.pseudo} !`);
+            onAuthSuccess(data.user, `Welcome, ${data.user.pseudo}!`);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -54,9 +54,9 @@ export default function AuthModal({ onAuthSuccess, onClose }) {
                 body: JSON.stringify(loginData),
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Identifiants invalides');
+            if (!res.ok) throw new Error(data.error || 'Invalid credentials');
             localStorage.setItem('mafia_user', JSON.stringify(data.user));
-            onAuthSuccess(data.user, `Bon retour ${data.user.pseudo}`);
+            onAuthSuccess(data.user, `Welcome back ${data.user.pseudo}`);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -67,7 +67,7 @@ export default function AuthModal({ onAuthSuccess, onClose }) {
     const handleGuest = (e) => {
         e.preventDefault();
         if (!guestData.pseudo_temp.trim()) {
-            setError('Le pseudo est requis.');
+            setError('Username is required.');
             return;
         }
         const guestUser = {
@@ -76,7 +76,7 @@ export default function AuthModal({ onAuthSuccess, onClose }) {
             is_guest: true,
         };
         localStorage.setItem('mafia_user', JSON.stringify(guestUser));
-        onAuthSuccess(guestUser, `Bienvenue, invité ${guestUser.pseudo}`);
+        onAuthSuccess(guestUser, `Welcome, guest ${guestUser.pseudo}`);
     };
 
     return (
@@ -99,8 +99,8 @@ export default function AuthModal({ onAuthSuccess, onClose }) {
 
                 <div className="p-6 pt-8">
                     <div className="text-center mb-6">
-                        <h2 className="text-2xl font-black uppercase tracking-widest text-on-surface mb-2 font-display">Entrez dans le cercle</h2>
-                        <p className="text-on-surface-variant text-sm">Identifiez-vous pour la prochaine partie</p>
+                        <h2 className="text-2xl font-black uppercase tracking-widest text-on-surface mb-2 font-display">Enter the Circle</h2>
+                        <p className="text-on-surface-variant text-sm">Identify yourself for the next game</p>
                     </div>
 
                     <AnimatePresence>
@@ -147,32 +147,32 @@ export default function AuthModal({ onAuthSuccess, onClose }) {
                         <AnimatePresence mode="wait">
                             {activeTab === 'sign_up' && (
                                 <motion.form key="signup" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }} onSubmit={handleSignup} className="space-y-4">
-                                    <InputField icon={Fingerprint} type="text" placeholder="Pseudo" value={signupData.pseudo} onChange={v => setSignupData({ ...signupData, pseudo: v })} />
+                                    <InputField icon={Fingerprint} type="text" placeholder="Username" value={signupData.pseudo} onChange={v => setSignupData({ ...signupData, pseudo: v })} />
                                     <InputField icon={Mail} type="email" placeholder="Email" value={signupData.email} onChange={v => setSignupData({ ...signupData, email: v })} />
-                                    <InputField icon={Lock} type="password" placeholder="Mot de passe" value={signupData.password} onChange={v => setSignupData({ ...signupData, password: v })} />
-                                    <SubmitButton isLoading={isLoading} label="Créer le compte" icon={<UserPlus className="w-5 h-5" />} />
+                                    <InputField icon={Lock} type="password" placeholder="Password" value={signupData.password} onChange={v => setSignupData({ ...signupData, password: v })} />
+                                    <SubmitButton isLoading={isLoading} label="Create Account" icon={<UserPlus className="w-5 h-5" />} />
                                 </motion.form>
                             )}
                             {activeTab === 'login' && (
                                 <motion.form key="login" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }} onSubmit={handleLogin} className="space-y-4">
                                     <InputField icon={AtSign} type="email" placeholder="Email" value={loginData.email} onChange={v => setLoginData({ ...loginData, email: v })} />
                                     <div className="space-y-1">
-                                        <InputField icon={Key} type="password" placeholder="Mot de passe" value={loginData.password} onChange={v => setLoginData({ ...loginData, password: v })} />
+                                        <InputField icon={Key} type="password" placeholder="Password" value={loginData.password} onChange={v => setLoginData({ ...loginData, password: v })} />
                                         <div className="text-right mt-1">
-                                            <a href="/forgot-password" onClick={onClose} className="text-xs text-on-surface-variant/70 hover:text-primary transition-colors pr-1">Mot de passe oublié ?</a>
+                                            <a href="/forgot-password" onClick={onClose} className="text-xs text-on-surface-variant/70 hover:text-primary transition-colors pr-1">Forgot password?</a>
                                         </div>
                                     </div>
-                                    <SubmitButton isLoading={isLoading} label="Se connecter" icon={<LogIn className="w-5 h-5" />} />
+                                    <SubmitButton isLoading={isLoading} label="Sign In" icon={<LogIn className="w-5 h-5" />} />
                                 </motion.form>
                             )}
                             {activeTab === 'guest' && (
                                 <motion.form key="guest" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }} onSubmit={handleGuest} className="space-y-4">
                                     <div className="text-on-surface-variant text-sm mb-2 bg-surface-container-low/50 p-4 rounded-xl flex items-start gap-3">
                                         <AlertCircle className="w-4 h-4 text-tertiary shrink-0 mt-0.5" />
-                                        <span>Session temporaire. Vos statistiques ne seront pas sauvegardées.</span>
+                                        <span>Temporary session. Your stats will not be saved.</span>
                                     </div>
-                                    <InputField icon={Ghost} type="text" placeholder="Pseudo temporaire" value={guestData.pseudo_temp} onChange={v => setGuestData({ ...guestData, pseudo_temp: v })} />
-                                    <SubmitButton isLoading={isLoading} label="Rejoindre en invité" icon={<Ghost className="w-5 h-5" />} />
+                                    <InputField icon={Ghost} type="text" placeholder="Temporary username" value={guestData.pseudo_temp} onChange={v => setGuestData({ ...guestData, pseudo_temp: v })} />
+                                    <SubmitButton isLoading={isLoading} label="Join as Guest" icon={<Ghost className="w-5 h-5" />} />
                                 </motion.form>
                             )}
                         </AnimatePresence>
@@ -204,7 +204,7 @@ function SubmitButton({ isLoading, label, icon }) {
             className="w-full mt-4 bg-gradient-to-r from-primary to-primary-container hover:from-primary/90 hover:to-primary-container/90 text-on-primary font-bold py-3.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-3 uppercase tracking-wider text-sm shadow-[0_10px_30px_rgba(109,40,217,0.3)]"
         >
             {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : icon}
-            <span>{isLoading ? 'Chargement...' : label}</span>
+            <span>{isLoading ? 'Loading...' : label}</span>
         </button>
     );
 }

@@ -5,7 +5,6 @@ import { motion } from 'framer-motion'
 import { Skull } from 'lucide-react'
 
 const DeadScreen = ({ phase, events }) => {
-    // latestEvent is sometimes useful if we want to show how they died, but keeping it simple as before:
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-surface text-center p-4 relative overflow-hidden font-sans">
             <div className="absolute inset-0 z-0 pointer-events-none">
@@ -18,11 +17,11 @@ const DeadScreen = ({ phase, events }) => {
                     <div className="absolute inset-0 bg-surface-container-highest/30 blur-3xl rounded-full" />
                     <Skull className="w-32 h-32 sm:w-40 sm:h-40 drop-shadow-xl opacity-80" />
                 </div>
-                <h2 className="text-4xl sm:text-5xl md:text-6xl font-black font-display text-transparent bg-clip-text bg-gradient-to-b from-on-surface-variant to-on-surface uppercase tracking-tighter mb-4 drop-shadow-md">Vous êtes mort·e</h2>
-                <p className="text-on-surface-variant font-medium text-sm sm:text-base md:text-lg mb-10 sm:mb-12 tracking-wide text-balance">Observez la chute de la ville en silence.</p>
+                <h2 className="text-4xl sm:text-5xl md:text-6xl font-black font-display text-transparent bg-clip-text bg-gradient-to-b from-on-surface-variant to-on-surface uppercase tracking-tighter mb-4 drop-shadow-md">You are Dead</h2>
+                <p className="text-on-surface-variant font-medium text-sm sm:text-base md:text-lg mb-10 sm:mb-12 tracking-wide text-balance">Watch the town's downfall in silence.</p>
 
                 <div className="bg-surface-container-highest/50 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 w-full shadow-2xl">
-                    <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-[0.4em] mb-3">Phase actuelle de la ville</p>
+                    <p className="text-on-surface-variant text-[10px] font-bold uppercase tracking-[0.4em] mb-3">Current Town Phase</p>
                     <p className="text-on-surface font-mono text-lg sm:text-xl font-bold uppercase tracking-widest">{phase?.replace(/_/g, ' ')}</p>
                 </div>
             </motion.div>

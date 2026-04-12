@@ -7,28 +7,29 @@ import { useGlobalAudio } from '../components/GlobalAudioProvider'
 // Audio configuration per game phase
 // ─────────────────────────────────────────────
 const AUDIO_CONFIG = {
-    lobby: {
-        url: 'https://cdn.pixabay.com/download/audio/2024/05/28/audio_suspense_lobby.mp3',
-        volume: 0.25,
+    // Waiting room / pre-game lobby — slow heartbeat + tense drone
+    waiting_room: {
+        url: '/audio/bgm/waiting_room.wav',
+        volume: 0.28,
         loop: true,
     },
     night: {
-        url: 'https://cdn.pixabay.com/download/audio/2024/05/20/audio_night_phase.mp3',
+        url: '/audio/bgm/night.wav',
         volume: 0.2,
         loop: true,
     },
     discussion: {
-        url: 'https://cdn.pixabay.com/download/audio/2024/06/01/audio_discussion_phase.mp3',
+        url: '/audio/bgm/discussion.wav',
         volume: 0.15,
         loop: true,
     },
     vote: {
-        url: 'https://cdn.pixabay.com/download/audio/2024/05/30/audio_vote_phase.mp3',
+        url: '/audio/bgm/vote.wav',
         volume: 0.35,
         loop: true,
     },
     elimination: {
-        url: 'https://cdn.pixabay.com/download/audio/2024/05/18/audio_elimination_phase.mp3',
+        url: '/audio/bgm/elimination.wav',
         volume: 0.4,
         loop: false,
     },
@@ -37,7 +38,7 @@ const AUDIO_CONFIG = {
 // Maps the room phase string to an audio config key
 function getAudioKey(phase) {
     if (!phase) return null
-    if (phase === 'lobby') return 'lobby'
+    if (phase === 'lobby' || phase === 'waiting_room') return 'waiting_room'
     if (phase.startsWith('night')) return 'night'
     if (phase === 'day_discussion') return 'discussion'
     if (phase === 'day_vote') return 'vote'

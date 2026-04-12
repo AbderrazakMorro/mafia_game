@@ -58,7 +58,7 @@ export default function RootLayout({ children }) {
     }
 
     return (
-        <html lang="fr" className={`${spaceGrotesk.variable} ${inter.variable}`}>
+        <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable}`}>
             <head>
                 <link rel="apple-touch-icon" href="/icon-192x192.png" />
                 <link rel="apple-touch-icon" sizes="180x180" href="/icon-192x192.png" />

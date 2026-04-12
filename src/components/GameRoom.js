@@ -31,9 +31,9 @@ const api = async (path, body) => {
 
 const ROLE_META = {
     mafia: { label: 'Mafia', color: 'text-secondary', bg: 'from-secondary-container/40', icon: <Target className="w-full h-full" />, border: 'border-secondary-container/30' },
-    doctor: { label: 'Docteur', color: 'text-emerald-400', bg: 'from-emerald-950/60', icon: <HeartPulse className="w-full h-full" />, border: 'border-emerald-900/50' },
-    detective: { label: 'Détective', color: 'text-blue-400', bg: 'from-blue-950/60', icon: <Search className="w-full h-full" />, border: 'border-blue-900/50' },
-    villager: { label: 'Villageois', color: 'text-on-surface', bg: 'from-slate-800/60', icon: <Users className="w-full h-full" />, border: 'border-outline-variant/15' },
+    doctor: { label: 'Doctor', color: 'text-emerald-400', bg: 'from-emerald-950/60', icon: <HeartPulse className="w-full h-full" />, border: 'border-emerald-900/50' },
+    detective: { label: 'Detective', color: 'text-blue-400', bg: 'from-blue-950/60', icon: <Search className="w-full h-full" />, border: 'border-blue-900/50' },
+    villager: { label: 'Villager', color: 'text-on-surface', bg: 'from-slate-800/60', icon: <Users className="w-full h-full" />, border: 'border-outline-variant/15' },
 }
 
 import Lobby from './GameRoom/Lobby'
@@ -172,7 +172,7 @@ export default function GameRoom({ roomId }) {
         const channel = getSupabase().channel(`game_room_${roomId}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, (payload) => {
                 if (payload.eventType === 'DELETE') {
-                    alert("⚠️ Désolé, cette salle a été supprimée suite à 5 minutes d'inactivité avant son lancement.");
+                    alert("⚠️ Sorry, this room was deleted after 5 minutes of inactivity before launch.");
                     router.push('/');
                     return;
                 }
@@ -395,7 +395,7 @@ export default function GameRoom({ roomId }) {
             return
         }
 
-        const confirmLeave = window.confirm("Êtes-vous sûr de vouloir quitter la salle ? Vous ne pourrez pas revenir.")
+        const confirmLeave = window.confirm("Are you sure you want to leave the room? You won't be able to come back.")
         if (!confirmLeave) return
 
         setIsLeaving(true)
@@ -404,7 +404,7 @@ export default function GameRoom({ roomId }) {
             window.location.href = '/'
         } catch (err) {
             console.error('Leave room error:', err.message)
-            alert('Erreur: Impossible de quitter la salle. ' + err.message)
+            alert('Error: Unable to leave the room. ' + err.message)
             setIsLeaving(false)
         }
     }
@@ -511,7 +511,7 @@ export default function GameRoom({ roomId }) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center text-on-surface-variant/70 font-serif">
                 <div className="w-8 h-8 border-4 border-slate-800 border-t-red-600 rounded-full animate-spin mr-4" />
-                Synchronisation ({phase})...
+                Syncing ({phase})...
             </div>
         )
     }
@@ -525,7 +525,7 @@ export default function GameRoom({ roomId }) {
                     disabled={isLeaving}
                     className="flex items-center gap-2 px-4 py-2 glass-panel bg-secondary-container/20 hover:bg-secondary-container/60 rounded-full text-on-secondary-container text-xs font-bold uppercase tracking-widest backdrop-blur-xl transition-all shadow-[0_0_15px_rgba(220,38,38,0.2)] hover:shadow-[0_0_20px_rgba(220,38,38,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    <span className="text-sm">🚪</span> {isLeaving ? 'Départ...' : 'Quitter la salle'}
+                    <span className="text-sm">🚪</span> {isLeaving ? 'Leaving...' : 'Leave Room'}
                 </button>
                 <button
                     onClick={() => { playSFX('click'); setShowAudioSettings(true); }}
