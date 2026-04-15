@@ -2,6 +2,7 @@ import { Space_Grotesk, Inter } from 'next/font/google'
 import './globals.css'
 import AuthProvider from '../components/AuthProvider'
 import GlobalAudioProvider from '../components/GlobalAudioProvider'
+import ServiceWorkerRegister from '../components/ServiceWorkerRegister'
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space' })
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
@@ -64,6 +65,7 @@ export default function RootLayout({ children }) {
                 <link rel="apple-touch-icon" sizes="180x180" href="/icon-192x192.png" />
             </head>
             <body>
+                <ServiceWorkerRegister />
                 <GlobalAudioProvider>
                     <AuthProvider>
                         {children}

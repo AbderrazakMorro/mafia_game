@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getSupabase } from '../lib/supabase'
@@ -10,6 +10,7 @@ import { useAuth } from '../components/AuthProvider'
 import ProfileModal from '../components/ProfileModal'
 import { useGlobalAudio } from '../components/GlobalAudioProvider'
 import AudioSettingsModal from '../components/AudioSettingsModal'
+import QRScanner from '../components/QRScanner'
 import Link from 'next/link'
 import {
     Sword, LogIn, UserPlus, UserCircle, LogOut,
@@ -17,7 +18,8 @@ import {
     Globe, Lock, Settings, Users, Sparkles, AlertCircle, Crown, Clock,
     BookOpen, Shield, Trash2, Volume2, VolumeX,
     Bell, Filter, RefreshCw, MessageSquare, Search,
-    Eye, History, Crosshair, UserCheck, UserX, ChevronRight, Mail
+    Eye, History, Crosshair, UserCheck, UserX, ChevronRight, Mail,
+    Camera, ScanLine, Download
 } from 'lucide-react'
 
 export default function Home() {
@@ -38,6 +40,8 @@ export default function Home() {
     const { playSFX, isMuted: globalMuted } = useGlobalAudio()
     const [showJoinCodeModal, setShowJoinCodeModal] = useState(false)
     const [showAudioSettings, setShowAudioSettings] = useState(false)
+    const [joinModalTab, setJoinModalTab] = useState('code') // 'code' or 'qr'
+    const [qrScanSuccess, setQrScanSuccess] = useState(false)
     const [createSettings, setCreateSettings] = useState({
         name: '',
         isPublic: true,
@@ -244,6 +248,8 @@ export default function Home() {
             if (!res.ok) throw new Error(reqData.error)
             setJoinCode('')
             setShowJoinCodeModal(false)
+            setJoinModalTab('code')
+            setQrScanSuccess(false)
         } catch (err) {
             alert("Erreur: " + (err.message || err.toString()))
         }
@@ -356,6 +362,12 @@ export default function Home() {
                         <History className="w-5 h-5 shrink-0" />
                         <span className="sidebar-label font-display text-sm uppercase tracking-tighter font-bold">Archive</span>
                     </Link>
+                    {isInstallable && (
+                        <button onClick={handleInstallClick} className="hidden md:flex items-center gap-4 px-6 py-4 text-primary/70 hover:bg-surface-container hover:text-primary transition-all w-full text-left">
+                            <Download className="w-5 h-5 shrink-0" />
+                            <span className="sidebar-label font-display text-sm uppercase tracking-tighter font-bold">Installer App</span>
+                        </button>
+                    )}
                 </nav>
 
                 {/* Recruit button */}
@@ -494,9 +506,9 @@ export default function Home() {
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.95 }}
                                         onClick={handleInstallClick}
-                                        className="hidden xl:flex bg-white/5 backdrop-blur-md text-on-surface-variant font-bold tracking-widest uppercase px-6 py-4 rounded-xl items-center gap-2 hover:text-on-surface hover:bg-white/10 transition-all text-sm"
+                                        className="flex md:hidden bg-surface-container-highest border border-outline-variant/30 text-on-surface font-bold px-6 py-3 sm:py-4 rounded-xl items-center gap-2 hover:bg-surface-container-highest/80 transition-all text-sm sm:text-base tracking-widest uppercase shadow-[0_5px_15px_rgba(0,0,0,0.2)]"
                                     >
-                                        <Smartphone className="w-5 h-5" />
+                                        <Smartphone className="w-5 h-5 text-primary" />
                                         Installer
                                     </motion.button>
                                 )}
@@ -767,30 +779,182 @@ export default function Home() {
                         >
                             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-primary-container" />
                             <div className="p-6">
-                                <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center justify-between mb-5">
                                     <h2 className="text-lg font-black text-on-surface uppercase tracking-wider flex items-center gap-2 font-display">
-                                        <Hash className="w-5 h-5 text-primary" /> Code d'invitation
+                                        {joinModalTab === 'code' ? <Hash className="w-5 h-5 text-primary" /> : <ScanLine className="w-5 h-5 text-primary" />}
+                                        {joinModalTab === 'code' ? "Code d'invitation" : 'Scanner QR'}
                                     </h2>
-                                    <button onClick={() => setShowJoinCodeModal(false)} className="text-on-surface-variant/70 hover:text-on-surface transition-colors bg-surface-container/60 p-2 rounded-full">
+                                    <button onClick={() => { setShowJoinCodeModal(false); setJoinModalTab('code'); setQrScanSuccess(false); }} className="text-on-surface-variant/70 hover:text-on-surface transition-colors bg-surface-container/60 p-2 rounded-full">
                                         <DoorOpen className="w-4 h-4" />
                                     </button>
                                 </div>
-                                <form onSubmit={joinRoom} className="space-y-4">
-                                    <input
-                                        type="text" placeholder="Code de la salle" value={joinCode}
-                                        onChange={(e) => setJoinCode(e.target.value)}
-                                        className="w-full bg-surface-container-lowest/40 border border-outline-variant/20 rounded-xl px-6 py-4 text-center text-on-surface text-xl font-bold tracking-[0.2em] uppercase focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-on-surface-variant/20 placeholder:normal-case placeholder:tracking-normal placeholder:font-normal placeholder:text-base"
-                                        maxLength={6}
-                                    />
-                                    <motion.button
-                                        whileHover={{ scale: joinCode.length >= 3 ? 1.02 : 1 }}
-                                        whileTap={{ scale: joinCode.length >= 3 ? 0.98 : 1 }}
-                                        type="submit" disabled={joinCode.length < 3}
-                                        className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold py-4 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-widest text-sm shadow-[0_10px_30px_rgba(109,40,217,0.3)]"
+
+                                {/* Tab Toggle */}
+                                <div className="flex bg-surface-container-lowest/40 rounded-xl p-1 border border-outline-variant/15 mb-5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setJoinModalTab('code')}
+                                        className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${
+                                            joinModalTab === 'code'
+                                                ? 'bg-primary-container text-on-surface shadow-md'
+                                                : 'text-on-surface-variant/70 hover:text-on-surface'
+                                        }`}
                                     >
-                                        Rejoindre la salle
-                                    </motion.button>
-                                </form>
+                                        <Hash className="w-4 h-4" /> Code
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setJoinModalTab('qr')}
+                                        className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${
+                                            joinModalTab === 'qr'
+                                                ? 'bg-primary-container text-on-surface shadow-md'
+                                                : 'text-on-surface-variant/70 hover:text-on-surface'
+                                        }`}
+                                    >
+                                        <Camera className="w-4 h-4" /> Scanner
+                                    </button>
+                                </div>
+
+                                <AnimatePresence mode="wait">
+                                    {joinModalTab === 'code' ? (
+                                        <motion.div
+                                            key="code-tab"
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: -20 }}
+                                            transition={{ duration: 0.2 }}
+                                        >
+                                            <form onSubmit={joinRoom} className="space-y-4">
+                                                <input
+                                                    type="text" placeholder="Code de la salle" value={joinCode}
+                                                    onChange={(e) => setJoinCode(e.target.value)}
+                                                    className="w-full bg-surface-container-lowest/40 border border-outline-variant/20 rounded-xl px-6 py-4 text-center text-on-surface text-xl font-bold tracking-[0.2em] uppercase focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-on-surface-variant/20 placeholder:normal-case placeholder:tracking-normal placeholder:font-normal placeholder:text-base"
+                                                    maxLength={6}
+                                                />
+                                                <motion.button
+                                                    whileHover={{ scale: joinCode.length >= 3 ? 1.02 : 1 }}
+                                                    whileTap={{ scale: joinCode.length >= 3 ? 0.98 : 1 }}
+                                                    type="submit" disabled={joinCode.length < 3}
+                                                    className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold py-4 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-widest text-sm shadow-[0_10px_30px_rgba(109,40,217,0.3)]"
+                                                >
+                                                    Rejoindre la salle
+                                                </motion.button>
+                                            </form>
+                                        </motion.div>
+                                    ) : (
+                                        <motion.div
+                                            key="qr-tab"
+                                            initial={{ opacity: 0, x: 20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: 20 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="flex flex-col items-center"
+                                        >
+                                            {qrScanSuccess ? (
+                                                <motion.div
+                                                    initial={{ scale: 0.8, opacity: 0 }}
+                                                    animate={{ scale: 1, opacity: 1 }}
+                                                    className="flex flex-col items-center gap-4 py-8"
+                                                >
+                                                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                                                        <svg className="w-8 h-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <p className="text-on-surface font-bold text-lg">QR Code détecté !</p>
+                                                        <p className="text-on-surface-variant text-sm mt-1">Connexion en cours...</p>
+                                                    </div>
+                                                    <div className="w-6 h-6 border-2 border-outline-variant/20 border-t-primary rounded-full animate-spin" />
+                                                </motion.div>
+                                            ) : (
+                                                <QRScanner
+                                                    onResult={(code) => {
+                                                        setQrScanSuccess(true)
+                                                        setJoinCode(code)
+                                                        // Brief delay to show success animation, then auto-submit
+                                                        setTimeout(async () => {
+                                                            if (!user) {
+                                                                openAuthModal()
+                                                                setQrScanSuccess(false)
+                                                                setShowJoinCodeModal(false)
+                                                                return
+                                                            }
+                                                            try {
+                                                                const supa = getSupabase()
+                                                                // Check if the code looks like a room ID (UUID) or a room code
+                                                                let room = null
+                                                                // First try as a code
+                                                                const { data: roomByCode } = await supa
+                                                                    .from('rooms').select('id, host_id')
+                                                                    .eq('code', code.toUpperCase()).single()
+                                                                if (roomByCode) {
+                                                                    room = roomByCode
+                                                                } else {
+                                                                    // Try as a room ID (from URL)
+                                                                    const { data: roomById } = await supa
+                                                                        .from('rooms').select('id, host_id')
+                                                                        .eq('id', code).single()
+                                                                    if (roomById) room = roomById
+                                                                }
+
+                                                                if (!room) {
+                                                                    alert('Code QR invalide ou salle introuvable.')
+                                                                    setQrScanSuccess(false)
+                                                                    return
+                                                                }
+
+                                                                if (room.host_id === user.id) {
+                                                                    router.push(`/room/${room.id}`)
+                                                                    return
+                                                                }
+
+                                                                const res = await fetch('/api/game/request-join', {
+                                                                    method: 'POST',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    body: JSON.stringify({
+                                                                        roomId: room.id, userId: user.id,
+                                                                        username: user.pseudo,
+                                                                        avatarUrl: user.avatar_url || ''
+                                                                    })
+                                                                })
+                                                                const reqData = await res.json()
+                                                                if (!res.ok) throw new Error(reqData.error)
+                                                                setJoinCode('')
+                                                                setShowJoinCodeModal(false)
+                                                                setJoinModalTab('code')
+                                                                setQrScanSuccess(false)
+                                                            } catch (err) {
+                                                                alert('Erreur: ' + (err.message || err.toString()))
+                                                                setQrScanSuccess(false)
+                                                            }
+                                                        }, 1200)
+                                                    }}
+                                                    onClose={() => setJoinModalTab('code')}
+                                                />
+                                            )}
+
+                                            {/* Divider with "or" */}
+                                            {!qrScanSuccess && (
+                                                <div className="w-full flex items-center gap-3 mt-5 mb-4">
+                                                    <div className="flex-1 h-px bg-outline-variant/20" />
+                                                    <span className="text-[10px] text-on-surface-variant/50 uppercase tracking-widest font-bold">ou</span>
+                                                    <div className="flex-1 h-px bg-outline-variant/20" />
+                                                </div>
+                                            )}
+
+                                            {/* Fallback: switch to code entry */}
+                                            {!qrScanSuccess && (
+                                                <button
+                                                    onClick={() => setJoinModalTab('code')}
+                                                    className="w-full bg-surface-container-highest/50 hover:bg-surface-container-highest text-on-surface font-bold py-3 rounded-xl transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2"
+                                                >
+                                                    <Hash className="w-4 h-4" /> Entrer le code manuellement
+                                                </button>
+                                            )}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </motion.div>
                     </div>

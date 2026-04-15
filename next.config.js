@@ -1,10 +1,4 @@
 /** @type {import('next').NextConfig} */
-const withPWA = require('next-pwa')({
-    dest: 'public',
-    register: true,
-    skipWaiting: true,
-    disable: false // process.env.NODE_ENV === 'development'
-})
 
 const nextConfig = {
     // Skip TypeScript type errors during build
@@ -17,8 +11,7 @@ const nextConfig = {
             { protocol: 'https', hostname: 'api.qrserver.com' },
         ],
     },
-    // next-pwa uses webpack, ignoring turbopack warning
     turbopack: {}
 }
 
-module.exports = withPWA(nextConfig)
+module.exports = nextConfig

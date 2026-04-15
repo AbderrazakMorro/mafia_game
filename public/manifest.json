@@ -18,42 +18,16 @@
     ],
     "icons": [
         {
-            "src": "/icons/icon-192.png",
+            "src": "/icon-192x192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any"
+            "purpose": "any maskable"
         },
         {
-            "src": "/icons/icon-512.png",
+            "src": "/icon-512x512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "maskable"
-        },
-        {
-            "src": "/icons/apple-touch-icon.png",
-            "sizes": "180x180",
-            "type": "image/png"
-        }
-    ],
-    "screenshots": [
-        {
-            "src": "/screenshots/mobile-view.png",
-            "sizes": "1080x1920",
-            "type": "image/png",
-            "form_factor": "narrow",
-            "label": "Join the Mafia Lobby"
-        }
-    ],
-    "shortcuts": [
-        {
-            "name": "Join Lobby",
-            "url": "/lobby",
-            "icons": [
-                {
-                    "src": "/icons/lobby.png",
-                    "sizes": "96x96"
-                }
-            ]
+            "purpose": "any maskable"
         }
     ]
 }
