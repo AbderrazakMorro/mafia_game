@@ -577,6 +577,7 @@ export default function Home() {
                                     const playerCount = room.players[0]?.count || 0
                                     const isFull = playerCount >= room.max_players
                                     const initials = (room.name || 'XX').substring(0, 2).toUpperCase()
+                                    const hasPendingRequest = myPendingRequests.some(r => r.room_id === room.id)
 
                                     return (
                                         <motion.div
@@ -591,8 +592,8 @@ export default function Home() {
                                                 <div className="bg-surface-container p-3 rounded-xl">
                                                     <Users className="w-5 h-5 text-primary" />
                                                 </div>
-                                                <span className={`text-xs font-bold px-3 py-1 rounded-full ${isFull ? 'bg-error/10 text-error border border-error/20' : 'bg-secondary/10 text-secondary border border-secondary/20'}`}>
-                                                    {isFull ? 'COMPLET' : 'LIVE'}
+                                                <span className={`text-xs font-bold px-3 py-1 rounded-full ${hasPendingRequest ? 'bg-tertiary/10 text-tertiary border border-tertiary/20' : isFull ? 'bg-error/10 text-error border border-error/20' : 'bg-secondary/10 text-secondary border border-secondary/20'}`}>
+                                                    {hasPendingRequest ? 'EN ATTENTE' : isFull ? 'COMPLET' : 'LIVE'}
                                                 </span>
                                             </div>
                                             <h3 className="font-display text-lg sm:text-xl font-bold mb-2 truncate">{room.name || 'Partie Sans Nom'}</h3>
@@ -614,13 +615,19 @@ export default function Home() {
                                                 </div>
                                                 <div className="flex items-center gap-3">
                                                     <span className="font-display font-bold text-primary">{playerCount}/{room.max_players}</span>
-                                                    <button
-                                                        onClick={() => joinPublicRoom(room.id)}
-                                                        disabled={isFull || joinLoadingId === room.id}
-                                                        className="bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold px-3 py-2 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                                                    >
-                                                        {joinLoadingId === room.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'REJOINDRE'}
-                                                    </button>
+                                                    {hasPendingRequest ? (
+                                                        <span className="flex items-center gap-1.5 text-tertiary text-xs font-bold px-3 py-2 rounded-lg bg-tertiary/10">
+                                                            <Clock className="w-3.5 h-3.5 animate-pulse" /> ENVOYÉE
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => joinPublicRoom(room.id)}
+                                                            disabled={isFull || joinLoadingId === room.id}
+                                                            className="bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold px-3 py-2 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                                        >
+                                                            {joinLoadingId === room.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'REJOINDRE'}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </motion.div>

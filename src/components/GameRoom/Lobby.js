@@ -144,7 +144,10 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                 return
             }
 
-            if (isUserHost || isPrivateRoom || isAuto) {
+            // Check if this user is already in the players list (accepted via join request)
+            const alreadyPlayer = players.some(p => p.user_id === userId)
+
+            if (isUserHost || isPrivateRoom || isAuto || alreadyPlayer) {
                 await onJoin(nameToUse.trim(), userId, autoAvatarUrl)
                 setAlreadyJoined(true)
 
@@ -158,8 +161,9 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                     } catch { }
                 }
             } else {
-                alert("You must go through the home page to join this public game.")
-                window.location.href = '/'
+                setNicknameError('Ce salon est public. Envoyez une demande depuis la page d\'accueil et attendez l\'approbation de l\'hôte.')
+                setJoining(false)
+                return
             }
         } catch (err) {
             console.error("Error joining:", err)

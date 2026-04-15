@@ -145,6 +145,37 @@ export default function GameRoom({ roomId }) {
                         }
                     }
                 }
+
+                // Fallback: check if authenticated user (from localStorage) is already a player in this room
+                // This handles the case where a user was accepted via a public room join request
+                // and redirected here, but doesn't have a session cookie for this room yet.
+                if (!fetchedMeData) {
+                    try {
+                        const stored = localStorage.getItem('mafia_user')
+                        if (stored) {
+                            const parsed = JSON.parse(stored)
+                            if (parsed?.id) {
+                                const res = await fetch(`/api/game/my-role?roomId=${roomId}`, {
+                                    headers: { 'x-user-id': parsed.id }
+                                })
+                                if (res.ok) {
+                                    const data = await res.json()
+                                    if (data.player) {
+                                        fetchedMeData = data.player
+                                        setMe(data.player)
+                                        // Set session cookie so future reconnects work
+                                        if (getCookieConsent() === 'granted') {
+                                            setConsentGranted(true)
+                                            setSessionCookie({ userId: parsed.id, roomId })
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Fallback auth player check error:', err)
+                    }
+                }
             }
 
             const { data: roomData } = await getSupabase().from('rooms').select('*').eq('id', roomId).single()
