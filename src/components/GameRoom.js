@@ -256,14 +256,41 @@ export default function GameRoom({ roomId }) {
                 if (payload.eventType === 'UPDATE') {
                     setRoom(payload.new)
                     setPhase(payload.new.status)
+                    
+                    // Supabase RLS correctly blocks anonymous socket connections from viewing the 'players' rows
+                    // once the roles are assigned. We must fetch the role separately via the secure backend API.
+                    if (payload.new.status === 'roles') {
+                        const fetchSyncRole = async () => {
+                            let userIdToUse = null;
+                            const cookie = getSessionCookie();
+                            if (cookie && cookie.roomId === roomId) {
+                                userIdToUse = cookie.userId;
+                            } else {
+                                try {
+                                    const stored = JSON.parse(localStorage.getItem('mafia_user'));
+                                    if (stored?.id) userIdToUse = stored.id;
+                                } catch {}
+                            }
+                            
+                            if (userIdToUse) {
+                                try {
+                                    const res = await fetch(`/api/game/my-role?roomId=${roomId}`, { headers: { 'x-user-id': userIdToUse } });
+                                    const data = await res.json();
+                                    if (data.player) setMe(data.player);
+                                } catch (err) {
+                                    console.error("Failed to sync role:", err);
+                                }
+                            }
+                        };
+                        fetchSyncRole();
+                    }
                 }
             })
-            // Realtime for the CURRENT player's row (they pass RLS)
+            // Realtime for the CURRENT player's row (attempts to catch if RLS allows)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `room_id=eq.${roomId}` }, (payload) => {
                 if (meRef.current && payload.new?.user_id === meRef.current.user_id) {
                     setMe(payload.new)
                 }
-                // Update local state if it's the current player
                 setPlayers(prev => {
                     if (payload.eventType === 'INSERT') {
                         if (prev.some(p => p.id === payload.new.id || p.user_id === payload.new.user_id)) return prev
@@ -274,7 +301,7 @@ export default function GameRoom({ roomId }) {
                     return prev
                 })
             })
-            // Realtime for everyone else via the view (if supported) or polling fallback
+            // Realtime for everyone else via the view
             .on('postgres_changes', { event: '*', schema: 'public', table: 'public_players', filter: `room_id=eq.${roomId}` }, (payload) => {
                 setPlayers(prev => {
                     if (payload.eventType === 'INSERT') {
@@ -289,7 +316,6 @@ export default function GameRoom({ roomId }) {
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_events', filter: `room_id=eq.${roomId}` }, (payload) => {
                 setEvents(prev => [...prev, payload.new])
                 
-                // Update players state based on game events
                 setPlayers(prev => {
                     let newPlayers = [...prev]
                     if (payload.new.event_type === 'night_result' || payload.new.event_type === 'day_result') {
@@ -308,14 +334,13 @@ export default function GameRoom({ roomId }) {
                     return newPlayers
                 })
 
-                // Extract detective result for the detective player
                 if (payload.new.event_type === 'night_result' && meRef.current?.role === 'detective') {
                     setDetectiveOwnResult(payload.new.payload?.detectiveResult ?? null)
                 }
             })
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'actions', filter: `room_id=eq.${roomId}` }, (payload) => {
-                // Live vote tallying
-                if (payload.new.action_type === 'vote' && payload.new.phase_number === room?.phase_number && payload.new.revote_round === room?.revote_round) {
+                // Live vote tallying utilizes ref to bypass stale closures
+                if (payload.new.action_type === 'vote' && payload.new.phase_number === roomRef.current?.phase_number && payload.new.revote_round === roomRef.current?.revote_round) {
                     setVoteCounts(prev => ({
                         ...prev,
                         [payload.new.target_id]: (prev[payload.new.target_id] || 0) + 1
@@ -325,9 +350,7 @@ export default function GameRoom({ roomId }) {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'join_requests', filter: `room_id=eq.${roomId}` }, (payload) => {
                 setPendingRequests(prev => {
                     if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
-                        // Avoid duplicates if multiple events trigger
                         if (prev.some(r => r.id === payload.new.id)) return prev;
-                        // Alert host when a new request comes in
                         playSFX('notification')
                         return [...prev, payload.new]
                     }
@@ -342,7 +365,7 @@ export default function GameRoom({ roomId }) {
             .subscribe()
 
         return () => getSupabase().removeChannel(channel)
-    }, [roomId, room?.phase_number, room?.revote_round])
+    }, [roomId])
 
     // ── Handlers ──
     const handleConsentChange = (status) => {
