@@ -396,13 +396,13 @@ export default function GameRoom({ roomId }) {
                         }
                     }
 
-                    // Constantly sync players in lobby
-                    if (currentRoom.status === 'lobby') {
+                    // Constantly sync players in lobby or gameover
+                    if (currentRoom.status === 'lobby' || currentRoom.status === 'game_over') {
                         if (refreshPlayersRef.current) {
                             await refreshPlayersRef.current()
                         }
                         // Host should sync join requests
-                        if (meRef.current?.user_id === currentRoom.host_id) {
+                        if (currentRoom.status === 'lobby' && meRef.current?.user_id === currentRoom.host_id) {
                             const { data: reqData } = await getSupabase()
                                 .from('join_requests')
                                 .select('*')
@@ -579,7 +579,16 @@ export default function GameRoom({ roomId }) {
 
     const handleReplay = async () => {
         try {
-            await api('/api/game/replay-ready', { roomId })
+            const data = await api('/api/game/replay-ready', { roomId })
+            
+            // Instantly display "ready" state for the user instead of waiting for database sync
+            setPlayers(prev => prev.map(p => p.id === me?.id ? { ...p, ready_for_replay: true } : p))
+            
+            // If this ping caused the database to reset the game to Lobby, transition instantly
+            if (data.gameReset) {
+                setPhase('lobby')
+                setRoom(prev => ({ ...prev, status: 'lobby', phase_number: 0, winner: null, revote_round: 0 }))
+            }
         } catch (err) {
             console.error('Replay error:', err.message)
         }
