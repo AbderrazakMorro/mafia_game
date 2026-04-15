@@ -372,9 +372,55 @@ export default function GameRoom({ roomId }) {
                     return prev
                 })
             })
-            .subscribe()
+            .subscribe((status, err) => {
+                if (status === 'CHANNEL_ERROR') {
+                    console.error("Supabase Realtime Channel Error!", err);
+                }
+            })
 
-        return () => getSupabase().removeChannel(channel)
+        // --- POLLING FALLBACK ---
+        // Guaranteed synchronization if WebSockets are blocked by network firewalls 
+        // or if Supabase Realtime Replication is not fully enabled in the dashboard.
+        const pollInterval = setInterval(async () => {
+            try {
+                const { data: currentRoom } = await getSupabase().from('rooms').select('*').eq('id', roomId).single()
+                if (currentRoom) {
+                    // Check if phase progressed entirely without realtime
+                    if (currentRoom.status !== roomRef.current?.status || currentRoom.phase_number !== roomRef.current?.phase_number) {
+                        setRoom(currentRoom)
+                        setPhase(currentRoom.status)
+                        
+                        // Force role sync if game just started
+                        if (currentRoom.status === 'roles' && roomRef.current?.status === 'lobby') {
+                            fetchSyncRole()
+                        }
+                    }
+
+                    // Constantly sync players in lobby
+                    if (currentRoom.status === 'lobby') {
+                        if (refreshPlayersRef.current) {
+                            await refreshPlayersRef.current()
+                        }
+                        // Host should sync join requests
+                        if (meRef.current?.user_id === currentRoom.host_id) {
+                            const { data: reqData } = await getSupabase()
+                                .from('join_requests')
+                                .select('*')
+                                .eq('room_id', roomId)
+                                .eq('status', 'pending')
+                            if (reqData) setPendingRequests(reqData)
+                        }
+                    }
+                }
+            } catch (err) {
+                // Silent fallback
+            }
+        }, 3000)
+
+        return () => {
+            clearInterval(pollInterval)
+            getSupabase().removeChannel(channel)
+        }
     }, [roomId])
 
     // ── Handlers ──
