@@ -31,5 +31,19 @@ Finalize audio management, integrate ad placeholders, create a contact page, and
 *   **Bug Fixes**: Resolved `ReferenceError: Mail is not defined` during build.
 *   **Build & Deploy**: Verified production build success (`npm run build`) and pushed the clean version to GitHub (excluding temporary scripts and large media assets where appropriate).
 
+### 6. Full English Localization
+*   **Systematic Translation**: Completed a total transition to English for all user-facing UI components, including:
+    *   Game phases (Public Debate, The Judgement, Night actions).
+    *   Role reveals and descriptions (Mafia, Doctor, Detective, Villager).
+    *   Game outcomes (Win/Dead screens).
+    *   Lobby, ChatBox, and authentication flows.
+*   **Technical**: Updated root `layout.js` to `lang="en"`.
+
+### 7. Enhanced Audio Experience
+*   **Suspenseful BGM**: Synthesized and integrated `waiting_room.wav`, a new cinematic looping track for the lobby/waiting room phases to build suspense.
+*   **User Notification**: Created `AudioHintToast`, a glassmorphism notification that appears on the first visit to inform users they can manage audio via settings.
+
 ## Resolved Issues
-*   **Audio Fixed**: Ran `generate_audio.js` to create proper PCM-synthesized WAV files for all SFX (click, chime, gunshot, notification) and BGM (lobby, discussion, vote, elimination, night). Updated `useGameAudio.js` and `GlobalAudioProvider.js` to reference local `/audio/bgm/*.wav` and `/audio/sfx/*.wav` files instead of non-existent Pixabay CDN URLs. Cleaned up all 0-byte placeholder files (.mp3, .ogg).
+*   **Audio Fixed**: Synthesized proper PCM WAV files for all assets. Updated `useGameAudio.js` and `GlobalAudioProvider.js` for local asset support.
+*   **Localization**: Eliminated all hardcoded French strings from the codebase.
+*   **Git Sync**: Successfully pushed all localized files and synthesized audio assets to the main branch.

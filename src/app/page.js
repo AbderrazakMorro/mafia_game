@@ -370,10 +370,60 @@ export default function Home() {
             </aside>
 
             {/* ══════════════════════════════════════════════ */}
-            {/* RIGHT SIDEBAR (Ad Space Placeholder)               */}
+            {/* RIGHT SIDEBAR (Pending Requests & Ad Space)    */}
             {/* ══════════════════════════════════════════════ */}
-            <aside className="hidden lg:flex fixed right-0 top-16 h-[calc(100vh-4rem)] w-80 bg-surface/30 border-l border-outline-variant/10 backdrop-blur-sm z-30 flex-col items-center justify-center p-6 pb-20">
-                <div className="w-full h-full border-2 border-dashed border-outline-variant/20 rounded-3xl flex flex-col justify-center items-center gap-4 text-on-surface-variant/40 bg-surface-container-lowest/30 overflow-hidden relative group transition-all hover:border-primary/30 hover:bg-surface-container-lowest/50">
+            <aside className="hidden lg:flex fixed right-0 top-16 h-[calc(100vh-4rem)] w-80 bg-surface/30 border-l border-outline-variant/10 backdrop-blur-sm z-30 flex-col p-6 pb-20 gap-6 overflow-y-auto custom-scrollbar">
+                
+                {/* Pending Requests */}
+                {user && myPendingRequests.length > 0 && (
+                    <div className="glass-panel rounded-3xl border border-outline-variant/10 flex flex-col p-6 shadow-2xl shrink-0 max-h-[60%]">
+                        <h2 className="font-display text-lg font-bold mb-4 flex items-center gap-2 shrink-0">
+                            <Clock className="w-5 h-5 text-primary animate-pulse" />
+                            REQUÊTES
+                        </h2>
+                        <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
+                            <AnimatePresence>
+                                {myPendingRequests.map(req => (
+                                    <motion.div
+                                        key={req.id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/5"
+                                    >
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-xs font-bold text-on-surface-variant shrink-0">
+                                                {req.rooms?.name?.[0]?.toUpperCase() || '?'}
+                                            </div>
+                                            <div className="overflow-hidden">
+                                                <p className="text-sm font-bold truncate">{req.rooms?.name || 'Partie'}</p>
+                                                <p className="text-[10px] text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
+                                                    <Hash className="w-3 h-3" /> {req.rooms?.code}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-tertiary/80">
+                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                            <span>En attente de l'hôte...</span>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-outline-variant/10 shrink-0">
+                            <div className="bg-surface-container-lowest rounded-xl p-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                                    <span className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">Status Serveur</span>
+                                </div>
+                                <span className="text-[10px] font-bold text-primary">OPTIMAL</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Ad Space Placeholder */}
+                <div className="w-full flex-1 min-h-[200px] border-2 border-dashed border-outline-variant/20 rounded-3xl flex flex-col justify-center items-center gap-4 text-on-surface-variant/40 bg-surface-container-lowest/30 overflow-hidden relative group transition-all hover:border-primary/30 hover:bg-surface-container-lowest/50 shrink-0">
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     <div className="bg-surface-container-high/50 p-4 rounded-full">
                         <Sparkles className="w-6 h-6 opacity-60 text-primary" />
@@ -671,61 +721,6 @@ export default function Home() {
                 </footer>
             </main>
 
-            {/* ══════════════════════════════════════════════ */}
-            {/* FLOATING SIDEBAR: Pending Requests (Desktop)   */}
-            {/* ══════════════════════════════════════════════ */}
-            {user && myPendingRequests.length > 0 && (
-                <aside className="hidden lg:block fixed right-6 top-24 bottom-24 w-72 z-30">
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="h-full glass-panel rounded-3xl border border-outline-variant/10 flex flex-col p-6 shadow-2xl"
-                    >
-                        <h2 className="font-display text-lg font-bold mb-6 flex items-center gap-2">
-                            <Clock className="w-5 h-5 text-primary animate-pulse" />
-                            REQUÊTES
-                        </h2>
-                        <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
-                            <AnimatePresence>
-                                {myPendingRequests.map(req => (
-                                    <motion.div
-                                        key={req.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
-                                        className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/5"
-                                    >
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-xs font-bold text-on-surface-variant shrink-0">
-                                                {req.rooms?.name?.[0]?.toUpperCase() || '?'}
-                                            </div>
-                                            <div className="overflow-hidden">
-                                                <p className="text-sm font-bold truncate">{req.rooms?.name || 'Partie'}</p>
-                                                <p className="text-[10px] text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
-                                                    <Hash className="w-3 h-3" /> {req.rooms?.code}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-xs text-tertiary/80">
-                                            <Loader2 className="w-3 h-3 animate-spin" />
-                                            <span>En attente de l'hôte...</span>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
-                        </div>
-                        <div className="mt-6 pt-6 border-t border-outline-variant/10">
-                            <div className="bg-surface-container-lowest rounded-xl p-3 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                                    <span className="text-[10px] font-bold tracking-widest text-on-surface-variant uppercase">Status Serveur</span>
-                                </div>
-                                <span className="text-[10px] font-bold text-primary">OPTIMAL</span>
-                            </div>
-                        </div>
-                    </motion.div>
-                </aside>
-            )}
 
             {/* ══════════════════════════════════════════════ */}
             {/* MOBILE BOTTOM NAV                              */}

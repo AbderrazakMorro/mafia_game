@@ -66,7 +66,9 @@ export default function GameRoom({ roomId }) {
 
     // Keep me in sync with players list
     const meRef = useRef(null)
-    meRef.current = me
+    const refreshPlayersRef = useRef(null)
+
+    useEffect(() => { meRef.current = me }, [me])
 
     // Keep room and phase sync for unload event
     const roomRef = useRef(room)
@@ -124,17 +126,30 @@ export default function GameRoom({ roomId }) {
         if (!roomId) return
 
         const refreshPlayers = async () => {
+            // Try public_players view first (strips sensitive fields like role)
             const { data: pData, error: pError } = await getSupabase()
                 .from('public_players')
                 .select('*')
                 .eq('room_id', roomId)
                 .order('created_at', { ascending: true })
-            if (pError) {
-                console.error('Error refreshing players:', pError)
-            } else if (pData) {
+
+            if (!pError && pData) {
                 setPlayers(pData)
+                return
+            }
+
+            // Fallback: query players table directly, selecting only public-safe columns
+            const { data: fallbackData, error: fallbackError } = await getSupabase()
+                .from('players')
+                .select('id, created_at, room_id, user_id, username, avatar_url, is_alive, is_protected, is_ready, ready_for_replay')
+                .eq('room_id', roomId)
+                .order('created_at', { ascending: true })
+
+            if (!fallbackError && fallbackData) {
+                setPlayers(fallbackData)
             }
         }
+        refreshPlayersRef.current = refreshPlayers
 
         const fetchInitialData = async () => {
             let fetchedMeData = null;
@@ -191,8 +206,28 @@ export default function GameRoom({ roomId }) {
             const { data: roomData } = await getSupabase().from('rooms').select('*').eq('id', roomId).single()
             if (roomData) { setRoom(roomData); setPhase(roomData.status) }
 
-            // Initial players fetch
+            // Fetch players from the public view
             await refreshPlayers()
+
+            // Safety net: if we found `me` via the server API but they're missing
+            // from the public_players view (RLS timing), inject them into the list
+            if (fetchedMeData) {
+                setPlayers(prev => {
+                    const exists = prev.some(p => p.id === fetchedMeData.id || p.user_id === fetchedMeData.user_id)
+                    if (exists) return prev
+                    return [...prev, {
+                        id: fetchedMeData.id,
+                        created_at: fetchedMeData.created_at,
+                        room_id: fetchedMeData.room_id,
+                        user_id: fetchedMeData.user_id,
+                        username: fetchedMeData.username,
+                        avatar_url: fetchedMeData.avatar_url,
+                        is_alive: fetchedMeData.is_alive,
+                        is_protected: fetchedMeData.is_protected,
+                        is_ready: fetchedMeData.is_ready,
+                    }]
+                })
+            }
 
             const { data: eventsData } = await getSupabase().from('game_events').select('*').eq('room_id', roomId).order('created_at', { ascending: true })
             if (eventsData) setEvents(eventsData)
@@ -209,11 +244,6 @@ export default function GameRoom({ roomId }) {
             }
         }
         fetchInitialData()
-        
-        // Expose refreshPlayers to handlers via window or a ref if needed, 
-        // but since we define handlers inside the component too, let's just 
-        // define refreshPlayers correctly.
-        window._refreshPlayers = refreshPlayers // temporary bridge for handlers defined outside this effect
 
 
         const channel = getSupabase().channel(`game_room_${roomId}`)
@@ -295,6 +325,10 @@ export default function GameRoom({ roomId }) {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'join_requests', filter: `room_id=eq.${roomId}` }, (payload) => {
                 setPendingRequests(prev => {
                     if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
+                        // Avoid duplicates if multiple events trigger
+                        if (prev.some(r => r.id === payload.new.id)) return prev;
+                        // Alert host when a new request comes in
+                        playSFX('notification')
                         return [...prev, payload.new]
                     }
                     if (payload.eventType === 'UPDATE') {
@@ -361,8 +395,25 @@ export default function GameRoom({ roomId }) {
                 if (consentGranted) {
                     setSessionCookie({ userId: finalUserId, roomId })
                 }
-                // Immediate refresh of all players
-                if (window._refreshPlayers) await window._refreshPlayers()
+                // Immediately add the player to the local list (guaranteed instant)
+                setPlayers(prev => {
+                    const exists = prev.some(p => p.id === joinData.player.id || p.user_id === joinData.player.user_id);
+                    if (exists) return prev;
+                    return [...prev, {
+                        id: joinData.player.id,
+                        created_at: joinData.player.created_at,
+                        room_id: joinData.player.room_id,
+                        user_id: joinData.player.user_id,
+                        username: joinData.player.username,
+                        avatar_url: joinData.player.avatar_url,
+                        is_alive: joinData.player.is_alive,
+                        is_protected: joinData.player.is_protected,
+                        is_ready: joinData.player.is_ready,
+                        ready_for_replay: joinData.player.ready_for_replay
+                    }];
+                });
+                // Also do a full refresh to sync any other players we might have missed
+                if (refreshPlayersRef.current) refreshPlayersRef.current()
             } else {
                 console.error("Join error:", joinData.error)
             }
@@ -381,7 +432,7 @@ export default function GameRoom({ roomId }) {
             const data = await res.json()
             if (data.success && action === 'accepted') {
                 // Immediate refresh of player list for host
-                if (window._refreshPlayers) await window._refreshPlayers()
+                if (refreshPlayersRef.current) await refreshPlayersRef.current()
             }
         } catch (err) {
             console.error("Resolve req error:", err)

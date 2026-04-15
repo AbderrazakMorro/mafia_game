@@ -313,29 +313,7 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                     </div>
 
                     <div className="flex flex-col gap-8">
-                        {/* Invite panel */}
-                        <div className="glass-panel rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col items-center gap-6 relative overflow-hidden border border-outline-variant/10">
-                            <h3 className="text-sm font-display text-primary/70 font-bold uppercase tracking-widest self-start relative z-10 w-full flex items-center gap-2">
-                                Invite Friends
-                            </h3>
-                            <div className="w-full flex flex-col items-center gap-2 relative z-10">
-                                <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-[0.3em]">Room Code</p>
-                                <span className="font-mono text-4xl md:text-5xl font-black tracking-[0.4em] text-transparent bg-clip-text bg-gradient-to-r from-secondary to-primary drop-shadow-md">{room?.code}</span>
-                            </div>
-                            <div className="w-full flex items-center justify-center relative z-10">
-                                <div className="p-1 bg-surface-container-highest rounded-2xl shadow-inner">
-                                    <div className="bg-surface rounded-xl overflow-hidden p-2">
-                                        <QRCode url={inviteUrl} />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="w-full flex flex-col items-center gap-2 relative z-10 mt-2">
-                                <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-[0.3em]">Invite Link</p>
-                                <InviteLinkActions url={inviteUrl} code={room?.code} />
-                            </div>
-                        </div>
-
-                        {/* Join Requests Panel (Host Only) */}
+                        {/* Join Requests Panel (Host Only) - MOVED ABOVE INVITE PANEL */}
                         {isHost && pendingRequests && pendingRequests.length > 0 && (
                             <div className="glass-panel rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col relative overflow-hidden border border-outline-variant/10">
                                 <h3 className="text-sm font-display text-primary/70 font-bold uppercase tracking-widest mb-6 flex items-center gap-3 relative z-10 justify-between">
@@ -375,6 +353,28 @@ const Lobby = ({ room, players, isHost, onStart, onJoin, currentUserId, roomId, 
                                 </ul>
                             </div>
                         )}
+
+                        {/* Invite panel */}
+                        <div className="glass-panel rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col items-center gap-6 relative overflow-hidden border border-outline-variant/10">
+                            <h3 className="text-sm font-display text-primary/70 font-bold uppercase tracking-widest self-start relative z-10 w-full flex items-center gap-2">
+                                Invite Friends
+                            </h3>
+                            <div className="w-full flex flex-col items-center gap-2 relative z-10">
+                                <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-[0.3em]">Room Code</p>
+                                <span className="font-mono text-4xl md:text-5xl font-black tracking-[0.4em] text-transparent bg-clip-text bg-gradient-to-r from-secondary to-primary drop-shadow-md">{room?.code}</span>
+                            </div>
+                            <div className="w-full flex items-center justify-center relative z-10">
+                                <div className="p-1 bg-surface-container-highest rounded-2xl shadow-inner">
+                                    <div className="bg-surface rounded-xl overflow-hidden p-2">
+                                        <QRCode url={inviteUrl} />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="w-full flex flex-col items-center gap-2 relative z-10 mt-2">
+                                <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-[0.3em]">Invite Link</p>
+                                <InviteLinkActions url={inviteUrl} code={room?.code} />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </motion.div>
