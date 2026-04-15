@@ -125,6 +125,29 @@ export default function GameRoom({ roomId }) {
     useEffect(() => {
         if (!roomId) return
 
+        const fetchSyncRole = async () => {
+            let userIdToUse = null;
+            const cookie = getSessionCookie();
+            if (cookie && cookie.roomId === roomId) {
+                userIdToUse = cookie.userId;
+            } else {
+                try {
+                    const stored = JSON.parse(localStorage.getItem('mafia_user'));
+                    if (stored?.id) userIdToUse = stored.id;
+                } catch {}
+            }
+            
+            if (userIdToUse) {
+                try {
+                    const res = await fetch(`/api/game/my-role?roomId=${roomId}`, { headers: { 'x-user-id': userIdToUse } });
+                    const data = await res.json();
+                    if (data.player) setMe(data.player);
+                } catch (err) {
+                    console.error("Failed to sync role:", err);
+                }
+            }
+        };
+
         const refreshPlayers = async () => {
             // Try public_players view first (strips sensitive fields like role)
             const { data: pData, error: pError } = await getSupabase()
@@ -260,28 +283,6 @@ export default function GameRoom({ roomId }) {
                     // Supabase RLS correctly blocks anonymous socket connections from viewing the 'players' rows
                     // once the roles are assigned. We must fetch the role separately via the secure backend API.
                     if (payload.new.status === 'roles') {
-                        const fetchSyncRole = async () => {
-                            let userIdToUse = null;
-                            const cookie = getSessionCookie();
-                            if (cookie && cookie.roomId === roomId) {
-                                userIdToUse = cookie.userId;
-                            } else {
-                                try {
-                                    const stored = JSON.parse(localStorage.getItem('mafia_user'));
-                                    if (stored?.id) userIdToUse = stored.id;
-                                } catch {}
-                            }
-                            
-                            if (userIdToUse) {
-                                try {
-                                    const res = await fetch(`/api/game/my-role?roomId=${roomId}`, { headers: { 'x-user-id': userIdToUse } });
-                                    const data = await res.json();
-                                    if (data.player) setMe(data.player);
-                                } catch (err) {
-                                    console.error("Failed to sync role:", err);
-                                }
-                            }
-                        };
                         fetchSyncRole();
                     }
                 }
@@ -316,6 +317,15 @@ export default function GameRoom({ roomId }) {
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_events', filter: `room_id=eq.${roomId}` }, (payload) => {
                 setEvents(prev => [...prev, payload.new])
                 
+                // --- FAIL-SAFE TRIGGER ---
+                // If the rooms table update was dropped by Postgres permissions or replica settings,
+                // this broadcast guarantees all clients transition exactly when the host clicks start.
+                if (payload.new.event_type === 'game_started') {
+                    setPhase('roles');
+                    setRoom(prev => ({ ...prev, status: 'roles', phase_number: 1 }));
+                    fetchSyncRole();
+                }
+
                 setPlayers(prev => {
                     let newPlayers = [...prev]
                     if (payload.new.event_type === 'night_result' || payload.new.event_type === 'day_result') {

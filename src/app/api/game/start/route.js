@@ -48,6 +48,16 @@ export async function POST(request) {
 
         if (roomError) throw roomError
 
+        // Force a robust realtime broadcast explicitly using game_events.
+        // This guarantees all clients instantly receive the "Start" state
+        // even if their database's Realtime config on rooms is misaligned.
+        await supabase.from('game_events').insert({
+            room_id: roomId,
+            phase_number: 1,
+            event_type: 'game_started',
+            payload: {}
+        })
+
         return NextResponse.json({ success: true })
     } catch (err) {
         console.error('[/api/game/start]', err)
